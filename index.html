@@ -193,12 +193,8 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 #toggleShoppingCardBtn{border:0;background:#eef1ef;color:#40504a;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;cursor:pointer}
 .shopping-card.collapsed #shoppingList{display:none}
 
-.shopping-add-form{display:grid;grid-template-columns:1fr 90px auto;gap:7px;margin:12px 0 10px}
-.shopping-add-form input{min-width:0;border:1px solid #dce2dd;border-radius:10px;padding:9px 10px;font:inherit}
-.shopping-add-form button{border:0;border-radius:10px;background:#203040;color:#fff;padding:9px 11px;font-weight:800;cursor:pointer}
-.shopping-card.collapsed .shopping-add-form{display:none}
-.manual-delete{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#f3f4f3;color:#596267;font-weight:900;cursor:pointer;margin-left:4px}
-@media(max-width:520px){.shopping-add-form{grid-template-columns:1fr 75px}.shopping-add-form button{grid-column:1/-1}}
+.shopping-card.collapsed .manual-delete{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#f3f4f3;color:#596267;font-weight:900;cursor:pointer;margin-left:4px}
+@media(max-width:520px){}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -298,11 +294,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
         <div class="shopping-card-head">
           <h2>Veckans inköpslista</h2>
           <button type="button" id="toggleShoppingCardBtn">Dölj inköpslista</button>
-        </div>
-        <div class="shopping-add-form">
-          <input id="manualItemName" type="text" placeholder="Lägg till egen vara">
-          <input id="manualItemQty" type="text" placeholder="Antal">
-          <button type="button" id="addManualItemBtn">Lägg till</button>
         </div>
         <div id="shoppingList"><div class="loading-copy">Laddar inköpslistan…</div></div>
       </div>
@@ -1060,32 +1051,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     }
   }
 
-  async function addManualShoppingItem() {
-    const name=(document.getElementById('manualItemName')?.value||'').trim();
-    const quantity=(document.getElementById('manualItemQty')?.value||'').trim();
-    if(!name || !activeWeekId) return;
-    document.getElementById('syncText').textContent='Sparar…';
-    const {error}=await sb.from('shopping_items').insert({
-      week_id:activeWeekId,
-      category:'Eget',
-      name,
-      quantity,
-      checked:false,
-      sort_order:900,
-      is_manual:true,
-      source_meal_id:null
-    });
-    if(error) {
-      console.error(error);
-      document.getElementById('syncText').textContent='Kunde inte spara';
-      return;
-    }
-    document.getElementById('manualItemName').value='';
-    document.getElementById('manualItemQty').value='';
-    const {data:sessionData}=await sb.auth.getSession();
-    if(sessionData.session?.user) await loadData(sessionData.session.user.id);
-  }
-
   async function moveMealToNextWeek(mealId) {
     const meal=currentMeals.find(m=>m.id===mealId);
     if(!meal || meal.status==='skipped') return;
@@ -1513,10 +1478,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     const btn=e.target.closest('.rule-delete');
     if(btn) deleteMealRule(Number(btn.dataset.ruleIndex));
   });
-
-  document.getElementById('addManualItemBtn')?.addEventListener('click', addManualShoppingItem);
-  document.getElementById('manualItemName')?.addEventListener('keydown', e => { if(e.key==='Enter') addManualShoppingItem(); });
-  document.getElementById('manualItemQty')?.addEventListener('keydown', e => { if(e.key==='Enter') addManualShoppingItem(); });
 
   document.getElementById('shoppingList')?.addEventListener('click', async e => {
     const del=e.target.closest('.manual-delete');
