@@ -179,6 +179,14 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
 .next-move-select{border:1px solid #dce2dd;background:#fff;color:#334047;border-radius:9px;padding:6px 7px;font-size:12px;font-weight:750;max-width:118px}
 @media(max-width:620px){.next-meal-row{align-items:flex-start}.next-meal-actions{flex-wrap:wrap;justify-content:flex-end}.next-move-select{max-width:108px}}
+
+.meal-edit-panel{margin-top:12px;padding:12px;background:#f7f8f7;border-radius:12px;display:grid;gap:8px}
+.meal-edit-panel.hidden{display:none}
+.meal-edit-panel select,.meal-edit-panel input{border:1px solid #dce2dd;border-radius:10px;padding:9px 10px;background:#fff;font:inherit;min-width:0}
+.meal-edit-actions{display:flex;gap:8px}
+.meal-edit-actions button{border:0;border-radius:9px;padding:9px 12px;font-weight:800;cursor:pointer}
+.meal-edit-actions button:first-child{background:#203040;color:#fff}
+.meal-edit-actions .secondary{background:#e9ece9;color:#334047}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -307,6 +315,18 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
         <select id="favoriteDaySelect"><option value="">Välj dag</option></select>
         <button type="button" id="useFavoriteBtn">Lägg in</button>
       </div>
+    </div>
+    <div class="meal-edit-panel hidden" id="mealEditPanel">
+      <div class="section-title">Byt rätt</div>
+      <input type="hidden" id="editMealId">
+      <select id="editFavoriteSelect"><option value="">Välj favorit eller skriv egen</option></select>
+      <input id="editMealTitle" type="text" placeholder="Rätt">
+      <input id="editMealIngredients" type="text" placeholder="Ingredienser">
+      <div class="meal-edit-actions">
+        <button type="button" id="saveMealEditBtn">Spara</button>
+        <button type="button" class="secondary" id="cancelMealEditBtn">Avbryt</button>
+      </div>
+      <div class="auth-status" id="mealEditStatus"></div>
     </div>
     <div class="next-note" id="nextWeekNote">Du får en påminnelse på söndagar att planera nästa vecka.</div>
   </div>
@@ -648,6 +668,14 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     }
   }
 
+  function populateEditFavorites() {
+    const sel=document.getElementById('editFavoriteSelect');
+    if(!sel) return;
+    sel.innerHTML='<option value="">Välj favorit eller skriv egen</option>'+currentFavorites.map(f=>
+      '<option value="'+escapeHtml(f.id)+'">'+escapeHtml(f.title)+'</option>'
+    ).join('');
+  }
+
   function isTacoRelated(title) {
     return /taco|fajita|burrito|quesadilla|nacho/i.test(String(title||''));
   }
@@ -721,6 +749,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       }).join('');
     }
     populateFavoriteEditor();
+    populateEditFavorites();
 
     if(note) note.textContent = (meals || []).length
       ? 'Klar för nästa veckobyte.'
@@ -1158,23 +1187,76 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(sessionData.session?.user) await loadData(sessionData.session.user.id);
   }
 
-  async function editPlannedMeal(mealId) {
+  function editPlannedMeal(mealId) {
     const meal=plannedMealsCache.find(m=>m.id===mealId);
     if(!meal) return;
-    const title=window.prompt('Ny rätt:',meal.title);
-    if(title===null || !title.trim()) return;
-    const ingredients=window.prompt('Ingredienser:',meal.ingredients||'');
-    if(ingredients===null) return;
-    const {error}=await sb.from('meals').update({
-      title:title.trim(),
-      ingredients:ingredients.trim(),
+    document.getElementById('editMealId').value=meal.id;
+    document.getElementById('editMealTitle').value=meal.title||'';
+    document.getElementById('editMealIngredients').value=meal.ingredients||'';
+    const favSel=document.getElementById('editFavoriteSelect');
+    if(favSel) favSel.value='';
+    const status=document.getElementById('mealEditStatus');
+    if(status) status.textContent='';
+    document.getElementById('mealEditPanel')?.classList.remove('hidden');
+    document.getElementById('mealEditPanel')?.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+
+  function closeMealEditor() {
+    document.getElementById('mealEditPanel')?.classList.add('hidden');
+    const status=document.getElementById('mealEditStatus');
+    if(status) status.textContent='';
+  }
+
+  async function saveMealEditor() {
+    const mealId=document.getElementById('editMealId')?.value;
+    const meal=plannedMealsCache.find(m=>m.id===mealId);
+    if(!meal) return;
+
+    const title=(document.getElementById('editMealTitle')?.value||'').trim();
+    const ingredients=(document.getElementById('editMealIngredients')?.value||'').trim();
+    const status=document.getElementById('mealEditStatus');
+    if(!title) {
+      if(status) status.textContent='Skriv namnet på rätten.';
+      return;
+    }
+    if(isFridayIso(meal.meal_date) && !isTacoRelated(title)) {
+      if(status) status.textContent='Fredag ska vara taco-relaterad.';
+      return;
+    }
+
+    if(status) status.textContent='Sparar…';
+    const selectedFavoriteId=document.getElementById('editFavoriteSelect')?.value;
+    const fav=currentFavorites.find(f=>f.id===selectedFavoriteId);
+
+    const payload=fav ? {
+      title:fav.title,
+      ingredients:fav.ingredients||'',
+      recipe:fav.recipe||[],
+      notes:fav.notes||null,
+      carried_over:false,
+      source_meal_id:null,
+      status:'planned'
+    } : {
+      title,
+      ingredients,
       recipe:[],
-      notes:null
-    }).eq('id',mealId);
-    if(error) console.error(error);
+      notes:null,
+      carried_over:false,
+      source_meal_id:null,
+      status:'planned'
+    };
+
+    const {error}=await sb.from('meals').update(payload).eq('id',mealId);
+    if(error) {
+      console.error(error);
+      if(status) status.textContent='Kunde inte spara.';
+      return;
+    }
+    closeMealEditor();
     const {data:sessionData}=await sb.auth.getSession();
     if(sessionData.session?.user) await loadData(sessionData.session.user.id);
   }
+
 
   async function removePlannedMeal(mealId) {
     const {error}=await sb.from('meals').delete().eq('id',mealId);
@@ -1324,6 +1406,14 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   });
 
   document.getElementById('useFavoriteBtn')?.addEventListener('click', useFavoriteOnDay);
+  document.getElementById('editFavoriteSelect')?.addEventListener('change', e => {
+    const fav=currentFavorites.find(f=>f.id===e.target.value);
+    if(!fav) return;
+    document.getElementById('editMealTitle').value=fav.title||'';
+    document.getElementById('editMealIngredients').value=fav.ingredients||'';
+  });
+  document.getElementById('saveMealEditBtn')?.addEventListener('click', saveMealEditor);
+  document.getElementById('cancelMealEditBtn')?.addEventListener('click', closeMealEditor);
   document.getElementById('addRuleBtn')?.addEventListener('click', addMealRule);
   document.getElementById('newRuleText')?.addEventListener('keydown', e => { if(e.key==='Enter') addMealRule(); });
   document.getElementById('mealRulesList')?.addEventListener('click', e => {
