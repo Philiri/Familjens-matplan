@@ -346,6 +346,42 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     return d.toLocaleDateString('sv-SE', opts) + '–' + end.toLocaleDateString('sv-SE', opts);
   }
 
+  function refreshDashboard() {
+    const weeklyShop=readNum('cost1');
+    const extras=currentExtraExpenses.reduce((sum,e)=>sum+Number(e.amount||0),0);
+    const currentWeek=weeklyShop+extras;
+    const remain=monthBudget-monthSpent;
+
+    const monthMetric=document.getElementById('monthBudgetMetric');
+    const targetMetric=document.getElementById('weekTargetMetric');
+    const spentEl=document.getElementById('spentTotal');
+    const remainEl=document.getElementById('remainingTotal');
+    const currentEl=document.getElementById('currentWeekTotal');
+    if(monthMetric) monthMetric.textContent=fmt(monthBudget);
+    if(targetMetric) targetMetric.textContent=fmt(weeklyTarget);
+    if(spentEl) spentEl.textContent=fmt(monthSpent);
+    if(remainEl) remainEl.textContent=fmt(remain);
+    if(currentEl) currentEl.textContent=fmt(currentWeek);
+
+    const progress=document.getElementById('budgetProgressBar');
+    const progressAmount=document.getElementById('progressAmount');
+    const progressFoot=document.getElementById('progressFoot');
+    if(progress) progress.style.width=Math.max(0,Math.min(100,(monthSpent/monthBudget)*100))+'%';
+    if(progressAmount) progressAmount.textContent=fmt(monthSpent).replace(' kr','')+' / '+fmt(monthBudget);
+    if(progressFoot) progressFoot.textContent=fmt(remain)+' kvar';
+
+    const status=document.getElementById('weekBudgetStatus');
+    if(status) {
+      const diff=weeklyTarget-currentWeek;
+      if(currentWeek===0) status.textContent='Aktuell vecka: ännu ingen kostnad registrerad.';
+      else if(diff>=0) status.textContent='Aktuell vecka: '+fmt(currentWeek)+' — '+fmt(diff)+' under riktmärket.';
+      else status.textContent='Aktuell vecka: '+fmt(currentWeek)+' — '+fmt(Math.abs(diff))+' över riktmärket.';
+    }
+
+    const summary=document.getElementById('weekCostSummary1');
+    if(summary) summary.textContent=fmt(currentWeek);
+  }
+
   function refreshShoppingProgress() {
     const items = [...document.querySelectorAll('#shoppingList .shop input[type="checkbox"]')];
     const done = items.filter(cb => cb.checked).length;
