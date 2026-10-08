@@ -108,6 +108,11 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
 .loading-copy,.empty-copy{padding:14px 2px;color:#6f777b;font-size:14px}
 .week-date{font-size:12px;color:#6f777b;margin-top:2px}
+
+.next-meals{display:grid;gap:6px;margin:10px 0 2px}
+.next-meal-row{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;background:#f7f8f7;border-radius:10px;font-size:13px}
+.next-meal-row span:first-child{font-weight:800;color:#203040}
+.next-meal-row span:last-child{text-align:right;color:#556066}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a>
@@ -208,17 +213,14 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     <div class="next-top">
       <div>
         <div class="home-eyebrow">NÄSTA VECKA</div>
-        <h2>Planeras när erbjudandena är aktuella</h2>
+        <h2 id="nextWeekTitle">Laddar nästa vecka…</h2>
+        <div class="week-date" id="nextWeekDate"></div>
       </div>
-      <span class="offer-badge">ICA + Stammis</span>
+      <span class="offer-badge" id="nextWeekBadge">Planerad</span>
     </div>
-    <p>Vi bygger inte fyra veckor i förväg längre. Nästa meny tas fram när veckans ICA-erbjudanden är publicerade, så att vi kan använda bra priser och hålla nere kostnaden.</p>
-    <div class="next-steps">
-      <div><b>1</b><span>Kolla aktuella ICA-erbjudanden</span></div>
-      <div><b>2</b><span>Lägg till eventuella Stammis-erbjudanden</span></div>
-      <div><b>3</b><span>Skapa meny + inköpslista runt 1 200 kr</span></div>
-    </div>
-    <div class="next-note">Du får en påminnelse på söndagar att planera nästa vecka.</div>
+    <p id="nextWeekText">Nästa vecka hämtas från Supabase.</p>
+    <div id="nextWeekMeals" class="next-meals"></div>
+    <div class="next-note" id="nextWeekNote">Du får en påminnelse på söndagar att planera nästa vecka.</div>
   </div>
 </section>
 
@@ -238,6 +240,8 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   let householdId = null;
   let activeWeekId = null;
   let activeWeekStart = null;
+  let plannedWeekId = null;
+  let plannedWeekStart = null;
   let monthBudget = 7000;
   let weeklyTarget = 1200;
   let monthSpent = 0;
@@ -379,6 +383,105 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(s1) s1.textContent = fmt(currentWeek);
   }
 
+
+  async function ensureNextPlannedWeek() {
+    if(!householdId || !activeWeekStart) return;
+    const d = new Date(activeWeekStart + 'T12:00:00');
+    d.setDate(d.getDate() + 7);
+    const nextStart = d.toISOString().slice(0,10);
+
+    const { data: existing } = await sb
+      .from('weeks')
+      .select('id, week_start, status')
+      .eq('household_id', householdId)
+      .eq('week_start', nextStart)
+      .maybeSingle();
+
+    if(!existing) {
+      await sb.from('weeks').insert({
+        household_id: householdId,
+        week_start: nextStart,
+        status: 'planned',
+        planned_budget: weeklyTarget,
+        notes: 'Planeras utifrån aktuella ICA-erbjudanden.'
+      });
+    }
+  }
+
+  async function maybeRollWeekForward(activeWeek, plannedWeek) {
+    if(!activeWeek || !plannedWeek) return false;
+
+    const today = new Date().toLocaleDateString('sv-SE');
+    if(plannedWeek.week_start > today) return false;
+
+    const { count, error: countError } = await sb
+      .from('meals')
+      .select('id', { count:'exact', head:true })
+      .eq('week_id', plannedWeek.id);
+
+    if(countError || !count || count < 1) return false;
+
+    const { error: archiveError } = await sb
+      .from('weeks')
+      .update({ status:'archived', updated_at:new Date().toISOString() })
+      .eq('id', activeWeek.id);
+
+    if(archiveError) {
+      console.error(archiveError);
+      return false;
+    }
+
+    const { error: activateError } = await sb
+      .from('weeks')
+      .update({ status:'active', updated_at:new Date().toISOString() })
+      .eq('id', plannedWeek.id);
+
+    if(activateError) {
+      console.error(activateError);
+      await sb.from('weeks').update({ status:'active', updated_at:new Date().toISOString() }).eq('id', activeWeek.id);
+      return false;
+    }
+
+    return true;
+  }
+
+  function renderNextWeek(week, meals) {
+    const title = document.getElementById('nextWeekTitle');
+    const date = document.getElementById('nextWeekDate');
+    const badge = document.getElementById('nextWeekBadge');
+    const text = document.getElementById('nextWeekText');
+    const list = document.getElementById('nextWeekMeals');
+    const note = document.getElementById('nextWeekNote');
+
+    if(!week) {
+      if(title) title.textContent = 'Ingen nästa vecka skapad ännu';
+      if(date) date.textContent = '';
+      if(badge) badge.textContent = 'Saknas';
+      if(text) text.textContent = 'Nästa vecka skapas automatiskt från den aktiva veckan.';
+      if(list) list.innerHTML = '';
+      return;
+    }
+
+    if(title) title.textContent = (meals || []).length ? 'Menyn är förberedd' : 'Planeras när erbjudandena är aktuella';
+    if(date) date.textContent = formatWeekLabel(week.week_start);
+    if(badge) badge.textContent = (meals || []).length ? ((meals || []).length + ' middagar') : 'Ej planerad';
+    if(text) text.textContent = (meals || []).length
+      ? 'Nästa vecka ligger klar i Supabase och blir automatiskt aktiv när veckan börjar.'
+      : 'När ICA-erbjudandena är aktuella fyller vi den här veckan med meny och inköpslista.';
+
+    if(list) {
+      list.innerHTML = (meals || []).map(meal => {
+        const d = meal.meal_date ? new Date(meal.meal_date + 'T12:00:00') : null;
+        const weekday = d ? d.toLocaleDateString('sv-SE',{weekday:'short'}) : '';
+        return '<div class="next-meal-row"><span>' + escapeHtml(weekday) + '</span><span>' + escapeHtml(meal.title) + '</span></div>';
+      }).join('');
+    }
+
+    if(note) note.textContent = (meals || []).length
+      ? 'Klar för nästa veckobyte.'
+      : 'Du får en påminnelse på söndagar att planera nästa vecka.';
+  }
+
   async function loadData(userId) {
     document.getElementById('syncText').textContent = 'Synkar…';
 
@@ -410,23 +513,51 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     monthBudget = Number(household.monthly_budget || 7000);
     weeklyTarget = Number(household.weekly_target || 1200);
 
-    const { data: activeWeek, error: weekError } = await sb
+    let { data: weeks, error: weekError } = await sb
       .from('weeks')
-      .select('id, week_start, planned_budget')
+      .select('id, week_start, status, planned_budget, notes, offers')
       .eq('household_id', householdId)
-      .eq('status', 'active')
-      .order('week_start', { ascending:false })
-      .limit(1)
-      .single();
+      .order('week_start', { ascending:true });
 
-    if(weekError || !activeWeek) {
+    if(weekError) {
       console.error(weekError);
+      document.getElementById('syncText').textContent = 'Synkfel';
+      return;
+    }
+
+    let activeWeek = (weeks || []).filter(w => w.status === 'active').sort((a,b)=>b.week_start.localeCompare(a.week_start))[0];
+    let plannedWeek = (weeks || []).filter(w => w.status === 'planned' && (!activeWeek || w.week_start > activeWeek.week_start)).sort((a,b)=>a.week_start.localeCompare(b.week_start))[0];
+
+    if(!activeWeek) {
       document.getElementById('syncText').textContent = 'Ingen aktiv vecka';
       return;
     }
+
+    if(await maybeRollWeekForward(activeWeek, plannedWeek)) {
+      const reload = await sb.from('weeks')
+        .select('id, week_start, status, planned_budget, notes, offers')
+        .eq('household_id', householdId)
+        .order('week_start', { ascending:true });
+      weeks = reload.data || [];
+      activeWeek = weeks.filter(w => w.status === 'active').sort((a,b)=>b.week_start.localeCompare(a.week_start))[0];
+      plannedWeek = weeks.filter(w => w.status === 'planned' && w.week_start > activeWeek.week_start).sort((a,b)=>a.week_start.localeCompare(b.week_start))[0];
+    }
+
     activeWeekId = activeWeek.id;
     activeWeekStart = activeWeek.week_start;
     weeklyTarget = Number(activeWeek.planned_budget || weeklyTarget);
+
+    await ensureNextPlannedWeek();
+
+    const { data: refreshedWeeks } = await sb
+      .from('weeks')
+      .select('id, week_start, status, planned_budget, notes, offers')
+      .eq('household_id', householdId)
+      .order('week_start', { ascending:true });
+
+    plannedWeek = (refreshedWeeks || []).filter(w => w.status === 'planned' && w.week_start > activeWeekStart).sort((a,b)=>a.week_start.localeCompare(b.week_start))[0] || null;
+    plannedWeekId = plannedWeek?.id || null;
+    plannedWeekStart = plannedWeek?.week_start || null;
 
     const { data: expenses, error: expensesError } = await sb
       .from('expenses')
@@ -478,6 +609,16 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(weekLabel) weekLabel.textContent = formatWeekLabel(activeWeekStart);
     if(weekTarget) weekTarget.textContent = fmt(weeklyTarget);
     if(activeMonth) activeMonth.textContent = fmt(monthBudget);
+
+    let plannedMeals = [];
+    if(plannedWeekId) {
+      const nextMealsResult = await sb.from('meals')
+        .select('id, meal_date, title, sort_order')
+        .eq('week_id', plannedWeekId)
+        .order('sort_order', { ascending:true });
+      plannedMeals = nextMealsResult.data || [];
+    }
+    renderNextWeek(plannedWeek, plannedMeals);
 
     refreshDashboard();
     document.getElementById('syncText').textContent = 'Synkad';
@@ -602,6 +743,10 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     })
     .on('postgres_changes', { event:'*', schema:'public', table:'meals' }, async payload => {
       if(!activeWeekId) return;
+      const { data: sessionData } = await sb.auth.getSession();
+      if(sessionData.session?.user) await loadData(sessionData.session.user.id);
+    })
+    .on('postgres_changes', { event:'*', schema:'public', table:'weeks' }, async payload => {
       const { data: sessionData } = await sb.auth.getSession();
       if(sessionData.session?.user) await loadData(sessionData.session.user.id);
     })
