@@ -261,14 +261,33 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
   }
 
   function refreshDashboard() {
-    const spent = [1,2,3,4].reduce((s,n)=>s+readNum('cost'+n),0) + readNum('extraCost');
+    const week1 = readNum('cost1');
+    const week2 = readNum('cost2');
+    const week3 = readNum('cost3');
+    const week4 = readNum('cost4');
+    const extra = readNum('extraCost');
+
+    const spent = week1 + week2 + week3 + week4 + extra;
     const remain = budget - spent;
+
     const a = document.getElementById('spentTotal');
     const b = document.getElementById('remainingTotal');
     const c = document.getElementById('bufferTotal');
+
     if(a) a.textContent = fmt(spent);
     if(b) b.textContent = fmt(remain);
     if(c) c.textContent = fmt(remain);
+
+    const s1 = document.getElementById('weekCostSummary1');
+    const s2 = document.getElementById('weekCostSummary2');
+    const s3 = document.getElementById('weekCostSummary3');
+    const s4 = document.getElementById('weekCostSummary4');
+
+    // Nuvarande "Extra köp under månaden" hör till vecka 1.
+    if(s1) s1.textContent = fmt(week1 + extra);
+    if(s2) s2.textContent = fmt(week2);
+    if(s3) s3.textContent = fmt(week3);
+    if(s4) s4.textContent = fmt(week4);
   }
 
   function applyRow(row) {
