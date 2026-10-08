@@ -60,7 +60,6 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 .week-fold[open]>summary:after{content:"Dölj"}
 .week-fold .week-inner{padding-top:2px}
 
-.cost-row strong{font-size:17px;padding:10px 0;text-align:right;color:#243038}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#v1">Vecka 1</a><a href="#v2">Vecka 2</a><a href="#v3">Vecka 3</a><a href="#v4">Vecka 4</a>
@@ -99,10 +98,22 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 
     <div class="section-title">Fyll i faktisk kostnad</div>
 
-    <div class="cost-row"><label>Vecka 1<small>Faktisk kostnad</small></label><strong id="costSummary1">0 kr</strong></div>
-    <div class="cost-row"><label>Vecka 2<small>Faktisk kostnad</small></label><strong id="costSummary2">0 kr</strong></div>
-    <div class="cost-row"><label>Vecka 3<small>Faktisk kostnad</small></label><strong id="costSummary3">0 kr</strong></div>
-    <div class="cost-row"><label>Vecka 4<small>Faktisk kostnad</small></label><strong id="costSummary4">0 kr</strong></div>
+    <div class="cost-row">
+      <label>Vecka 1<small>Faktisk kostnad</small></label>
+      <input inputmode="decimal" type="number" min="0" step="1" id="cost1" placeholder="0 kr">
+    </div>
+    <div class="cost-row">
+      <label>Vecka 2<small>Faktisk kostnad</small></label>
+      <input inputmode="decimal" type="number" min="0" step="1" id="cost2" placeholder="0 kr">
+    </div>
+    <div class="cost-row">
+      <label>Vecka 3<small>Faktisk kostnad</small></label>
+      <input inputmode="decimal" type="number" min="0" step="1" id="cost3" placeholder="0 kr">
+    </div>
+    <div class="cost-row">
+      <label>Vecka 4<small>Faktisk kostnad</small></label>
+      <input inputmode="decimal" type="number" min="0" step="1" id="cost4" placeholder="0 kr">
+    </div>
     <div class="cost-row">
       <label>Extra köp under månaden<small>Mjölk, bröd, frukt osv.</small></label>
       <input inputmode="decimal" type="number" min="0" step="1" id="extraCost" placeholder="0 kr">
@@ -239,15 +250,15 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
     return el ? (parseFloat(el.value) || 0) : 0;
   }
 
-  function setWeekCost(n, value, origin=null) {
-    const input = document.getElementById('weekCost'+n);
-    const summary = document.getElementById('costSummary'+n);
-    if (input && input !== origin) input.value = value || '';
-    if (summary) summary.textContent = fmt(value || 0);
+  function setBoth(n, value, origin=null) {
+    const overview = document.getElementById('cost'+n);
+    const weekInput = document.getElementById('weekCost'+n);
+    if (overview && overview !== origin) overview.value = value || '';
+    if (weekInput && weekInput !== origin) weekInput.value = value || '';
   }
 
   function refreshDashboard() {
-    const spent = [1,2,3,4].reduce((s,n)=>s+readNum('weekCost'+n),0) + readNum('extraCost');
+    const spent = [1,2,3,4].reduce((s,n)=>s+readNum('cost'+n),0) + readNum('extraCost');
     const remain = budget - spent;
     const a = document.getElementById('spentTotal');
     const b = document.getElementById('remainingTotal');
@@ -260,10 +271,10 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
   function applyRow(row) {
     if(!row) return;
     currentRow = row;
-    setWeekCost(1, row.week1_cost);
-    setWeekCost(2, row.week2_cost);
-    setWeekCost(3, row.week3_cost);
-    setWeekCost(4, row.week4_cost);
+    setBoth(1, row.week1_cost);
+    setBoth(2, row.week2_cost);
+    setBoth(3, row.week3_cost);
+    setBoth(4, row.week4_cost);
     const extra = document.getElementById('extraCost');
     if(extra) extra.value = row.extra_cost || '';
     applyChecks(row.checked_items || {});
@@ -283,10 +294,10 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 
   async function saveData() {
     const payload = {
-      week1_cost: readNum('weekCost1'),
-      week2_cost: readNum('weekCost2'),
-      week3_cost: readNum('weekCost3'),
-      week4_cost: readNum('weekCost4'),
+      week1_cost: readNum('cost1'),
+      week2_cost: readNum('cost2'),
+      week3_cost: readNum('cost3'),
+      week4_cost: readNum('cost4'),
       extra_cost: readNum('extraCost'),
       checked_items: collectChecks(),
       updated_at: new Date().toISOString()
@@ -347,9 +358,16 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
   });
 
   for(let n=1;n<=4;n++) {
-    const input = document.getElementById('weekCost'+n);
-    if(input) input.addEventListener('input', e => {
-      setWeekCost(n, e.target.value, e.target);
+    const overview = document.getElementById('cost'+n);
+    const weekInput = document.getElementById('weekCost'+n);
+
+    if(overview) overview.addEventListener('input', e => {
+      setBoth(n, e.target.value, e.target);
+      scheduleSave();
+    });
+
+    if(weekInput) weekInput.addEventListener('input', e => {
+      setBoth(n, e.target.value, e.target);
       scheduleSave();
     });
   }
