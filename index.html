@@ -76,7 +76,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 .progress-foot{font-size:12px;color:#6f777b}
 .week-state{font-size:11px;font-weight:800;background:#ffffff20;padding:5px 8px;border-radius:999px}.week-state.current{background:#fff;color:#203040}
 .auth-panel #loggedIn{display:flex;align-items:center;justify-content:space-between;gap:10px}.auth-panel #loggedIn>div:nth-child(2){display:none}.auth-panel #loggedIn .auth-actions{margin:0}.auth-panel #loggedIn .auth-actions button{padding:7px 10px;font-size:12px}
-body.shopping-mode #budget,body.shopping-mode .home-panel,body.shopping-mode .card:not(.shopping-card),body.shopping-mode .hero,body.shopping-mode .week-cost,body.shopping-mode #v2,body.shopping-mode #v3,body.shopping-mode #v4{display:none!important}
+body.shopping-mode #budget,body.shopping-mode .home-panel,body.shopping-mode .rolling-next,body.shopping-mode .card:not(.shopping-card),body.shopping-mode .hero,body.shopping-mode .week-cost,body.shopping-mode #v2,body.shopping-mode #v3,body.shopping-mode #v4{display:none!important}
 body.shopping-mode #v1{display:block!important}
 body.shopping-mode #v1 .week-fold{display:block!important}
 body.shopping-mode #v1 .week-fold>summary{display:none!important}
@@ -94,9 +94,20 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .shop:has(input:checked) .name,.shop:has(input:checked) .qty{text-decoration:line-through;opacity:.48}
 .shopping-card.hide-checked .shop:has(input:checked){display:none}
 .shopping-card .section-title{scroll-margin-top:145px}
+
+.rolling-next{scroll-margin-top:95px;margin:12px 0 24px}
+.next-card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 3px 14px rgba(0,0,0,.05)}
+.next-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.next-card h2{font-size:21px;line-height:1.15;margin:2px 0 8px}
+.next-card p{font-size:14px;line-height:1.45;color:#556066;margin:0 0 14px}
+.offer-badge{background:#eef3ee;color:#47604b;border-radius:999px;padding:7px 9px;font-size:11px;font-weight:850;white-space:nowrap}
+.next-steps{display:grid;gap:8px}.next-steps>div{display:grid;grid-template-columns:28px 1fr;gap:9px;align-items:center;background:#f7f8f7;border-radius:12px;padding:9px 10px;font-size:13px;font-weight:700}
+.next-steps b{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#203040;color:#fff;font-size:12px}
+.next-note{margin-top:11px;background:#fff7e6;border-radius:12px;padding:10px 11px;font-size:12.5px;font-weight:700}
+.legacy-future{display:none!important}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
-<a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#v1">Veckor</a>
+<a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a>
 </div></header><main>
 <section class="auth-panel" id="authPanel">
   <h2>Familjens synkning</h2>
@@ -176,7 +187,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 </section>
 <section class="week locked" id="v1">
     <details class="week-fold" open>
-      <summary><span>Vecka 1</span><small class="week-state current">Aktuell</small></summary>
+      <summary><span>Aktuell vecka</span><small class="week-state current">Nu</small></summary>
       <div class="week-inner">
         
     
@@ -193,7 +204,27 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     </div>
       </div>
     </details>
-  </section><section class="week locked" id="v2">
+  </section>
+<section class="rolling-next locked" id="nextWeek">
+  <div class="next-card">
+    <div class="next-top">
+      <div>
+        <div class="home-eyebrow">NÄSTA VECKA</div>
+        <h2>Planeras när erbjudandena är aktuella</h2>
+      </div>
+      <span class="offer-badge">ICA + Stammis</span>
+    </div>
+    <p>Vi bygger inte fyra veckor i förväg längre. Nästa meny tas fram när veckans ICA-erbjudanden är publicerade, så att vi kan använda bra priser och hålla nere kostnaden.</p>
+    <div class="next-steps">
+      <div><b>1</b><span>Kolla aktuella ICA-erbjudanden</span></div>
+      <div><b>2</b><span>Lägg till eventuella Stammis-erbjudanden</span></div>
+      <div><b>3</b><span>Skapa meny + inköpslista runt 1 200 kr</span></div>
+    </div>
+    <div class="next-note">Du får en påminnelse på söndagar att planera nästa vecka.</div>
+  </div>
+</section>
+
+<section class="week locked legacy-future" id="v2">
     <details class="week-fold">
       <summary><span>Vecka 2</span><small class="week-state">Kommande</small></summary>
       <div class="week-inner">
@@ -212,7 +243,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     </div>
       </div>
     </details>
-  </section><section class="week locked" id="v3">
+  </section><section class="week locked legacy-future" id="v3">
     <details class="week-fold">
       <summary><span>Vecka 3</span><small class="week-state">Senare</small></summary>
       <div class="week-inner">
@@ -231,7 +262,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     </div>
       </div>
     </details>
-  </section><section class="week locked" id="v4">
+  </section><section class="week locked legacy-future" id="v4">
     <details class="week-fold">
       <summary><span>Vecka 4</span><small class="week-state">Senare</small></summary>
       <div class="week-inner">
@@ -271,7 +302,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   const fmt = n => Math.round(Number(n || 0)).toLocaleString('sv-SE') + ' kr';
 
   function setLocked(locked) {
-    document.querySelectorAll('section.week, .home-panel').forEach(el => el.classList.toggle('locked', locked));
+    document.querySelectorAll('section.week, .home-panel, .rolling-next').forEach(el => el.classList.toggle('locked', locked));
   }
 
   function checkboxKey(cb, index) {
