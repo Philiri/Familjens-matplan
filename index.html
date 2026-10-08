@@ -151,38 +151,25 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   <div class="budget-card">
     <h2>Budgetöversikt</h2>
     <div class="budget-grid">
-      <div class="bigmetric"><span>Månadsbudget</span><b>7 000 kr</b></div>
-      <div class="bigmetric"><span>Riktmärke per veckohandling</span><b>1 200 kr</b></div>
-      <div class="bigmetric"><span>Faktiskt spenderat</span><b id="spentTotal">734 kr</b></div>
-      <div class="bigmetric"><span>Kvar av budgeten</span><b id="remainingTotal">6 266 kr</b></div>
-      <div class="bigmetric full"><span>Marginal för påfyllning och extra köp</span><b id="bufferTotal">6 266 kr</b></div>
+      <div class="bigmetric"><span>Månadsbudget</span><b id="monthBudgetMetric">7 000 kr</b></div>
+      <div class="bigmetric"><span>Riktmärke aktuell vecka</span><b id="weekTargetMetric">1 200 kr</b></div>
+      <div class="bigmetric"><span>Faktiskt spenderat i månaden</span><b id="spentTotal">0 kr</b></div>
+      <div class="bigmetric"><span>Kvar av budgeten</span><b id="remainingTotal">7 000 kr</b></div>
+      <div class="bigmetric full"><span>Aktuell vecka totalt</span><b id="currentWeekTotal">0 kr</b></div>
     </div>
 
-    <div class="section-title">Fyll i faktisk kostnad</div>
+    <div class="section-title">Aktuell vecka</div>
 
     <div class="cost-row">
-      <label>Vecka 1<small>Veckohandling</small></label>
+      <label>Veckohandling<small>Stora veckohandlingen</small></label>
       <input inputmode="decimal" type="number" min="0" step="1" id="cost1" placeholder="0 kr">
     </div>
     <div class="cost-row">
-      <label>Vecka 2<small>Veckohandling</small></label>
-      <input inputmode="decimal" type="number" min="0" step="1" id="cost2" placeholder="0 kr">
-    </div>
-    <div class="cost-row">
-      <label>Vecka 3<small>Veckohandling</small></label>
-      <input inputmode="decimal" type="number" min="0" step="1" id="cost3" placeholder="0 kr">
-    </div>
-    <div class="cost-row">
-      <label>Vecka 4<small>Veckohandling</small></label>
-      <input inputmode="decimal" type="number" min="0" step="1" id="cost4" placeholder="0 kr">
-    </div>
-    <div class="cost-row">
-      <label>Extra köp under månaden<small>Mjölk, bröd, frukt osv.</small></label>
+      <label>Extra köp<small>Mjölk, bröd, frukt osv.</small></label>
       <input inputmode="decimal" type="number" min="0" step="1" id="extraCost" placeholder="0 kr">
     </div>
 
-    <div class="budget-note">Beloppen och inköpslistan synkas automatiskt mellan era inloggade enheter.</div>
-
+    <div class="budget-note">Kostnaderna sparas nu per vecka och bygger automatiskt upp er månadshistorik.</div>
   </div>
 </section>
 <section class="week locked" id="v1">
@@ -294,9 +281,14 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   const SUPABASE_URL = 'https://lxnljdtkqnwczkfrksth.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_YqiuT3CUN0zaEUTv2TR7Dg_XOcd1g_v';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  const ROW_ID = 1;
-  const budget = 7000;
-  let currentRow = null;
+  let householdId = null;
+  let activeWeekId = null;
+  let activeWeekStart = null;
+  let monthBudget = 7000;
+  let weeklyTarget = 1200;
+  let monthSpent = 0;
+  let weeklyShopExpenseId = null;
+  let extraExpenseId = null;
   let saveTimer = null;
 
   const fmt = n => Math.round(Number(n || 0)).toLocaleString('sv-SE') + ' kr';
@@ -305,138 +297,191 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     document.querySelectorAll('section.week, .home-panel, .rolling-next').forEach(el => el.classList.toggle('locked', locked));
   }
 
-  function checkboxKey(cb, index) {
-    const week = cb.closest('.week')?.id || 'unknown';
-    const label = cb.closest('.shop');
-    const name = label?.querySelector('.name')?.childNodes?.[0]?.textContent?.trim() || ('item-' + index);
-    return week + '::' + name + '::' + index;
-  }
-
-  function collectChecks() {
-    const obj = {};
-    document.querySelectorAll('.shop input[type="checkbox"]').forEach((cb, i) => {
-      obj[checkboxKey(cb, i)] = !!cb.checked;
-    });
-    return obj;
-  }
-
-  function applyChecks(obj) {
-    const checks = obj || {};
-    document.querySelectorAll('.shop input[type="checkbox"]').forEach((cb, i) => {
-      cb.checked = !!checks[checkboxKey(cb, i)];
-    });
-  }
-
   function readNum(id) {
     const el = document.getElementById(id);
     return el ? (parseFloat(el.value) || 0) : 0;
   }
 
-  function setBoth(n, value, origin=null) {
-    const overview = document.getElementById('cost'+n);
-    const summary = document.getElementById('weekCostSummary'+n);
-    if (overview && overview !== origin) overview.value = value || '';
-    if (summary) summary.textContent = fmt(value || 0);
+  function applyChecks(items) {
+    const boxes = [...document.querySelectorAll('#v1 .shopping-card .shop input[type="checkbox"], #v1 .shop input[type="checkbox"]')];
+    boxes.forEach((cb, i) => {
+      const item = items?.[i];
+      if(!item) return;
+      cb.checked = !!item.checked;
+      cb.dataset.itemId = item.id;
+    });
   }
 
   function refreshDashboard() {
-    const week1 = readNum('cost1');
-    const week2 = readNum('cost2');
-    const week3 = readNum('cost3');
-    const week4 = readNum('cost4');
+    const weeklyShop = readNum('cost1');
     const extra = readNum('extraCost');
+    const currentWeek = weeklyShop + extra;
+    const remain = monthBudget - monthSpent;
 
-    const spent = week1 + week2 + week3 + week4 + extra;
-    const remain = budget - spent;
-
-    const a = document.getElementById('spentTotal');
-    const b = document.getElementById('remainingTotal');
-    const c = document.getElementById('bufferTotal');
-
-    if(a) a.textContent = fmt(spent);
-    if(b) b.textContent = fmt(remain);
-    if(c) c.textContent = fmt(remain);
+    document.getElementById('monthBudgetMetric') && (document.getElementById('monthBudgetMetric').textContent = fmt(monthBudget));
+    document.getElementById('weekTargetMetric') && (document.getElementById('weekTargetMetric').textContent = fmt(weeklyTarget));
+    document.getElementById('spentTotal') && (document.getElementById('spentTotal').textContent = fmt(monthSpent));
+    document.getElementById('remainingTotal') && (document.getElementById('remainingTotal').textContent = fmt(remain));
+    document.getElementById('currentWeekTotal') && (document.getElementById('currentWeekTotal').textContent = fmt(currentWeek));
 
     const progress = document.getElementById('budgetProgressBar');
     const progressAmount = document.getElementById('progressAmount');
     const progressFoot = document.getElementById('progressFoot');
-    if(progress) progress.style.width = Math.max(0, Math.min(100, (spent / budget) * 100)) + '%';
-    if(progressAmount) progressAmount.textContent = fmt(spent).replace(' kr','') + ' / 7 000 kr';
+    if(progress) progress.style.width = Math.max(0, Math.min(100, (monthSpent / monthBudget) * 100)) + '%';
+    if(progressAmount) progressAmount.textContent = fmt(monthSpent).replace(' kr','') + ' / ' + fmt(monthBudget);
     if(progressFoot) progressFoot.textContent = fmt(remain) + ' kvar';
 
     const weekBudgetStatus = document.getElementById('weekBudgetStatus');
     if(weekBudgetStatus) {
-      const actualWeek1 = week1 + extra;
-      const diff = 1200 - actualWeek1;
-      if(actualWeek1 === 0) {
-        weekBudgetStatus.textContent = 'Vecka 1: ännu ingen kostnad registrerad.';
-      } else if(diff >= 0) {
-        weekBudgetStatus.textContent = 'Vecka 1: ' + fmt(actualWeek1) + ' — ' + fmt(diff) + ' under riktmärket 1 200 kr.';
-      } else {
-        weekBudgetStatus.textContent = 'Vecka 1: ' + fmt(actualWeek1) + ' — ' + fmt(Math.abs(diff)) + ' över riktmärket 1 200 kr.';
-      }
+      const diff = weeklyTarget - currentWeek;
+      if(currentWeek === 0) weekBudgetStatus.textContent = 'Aktuell vecka: ännu ingen kostnad registrerad.';
+      else if(diff >= 0) weekBudgetStatus.textContent = 'Aktuell vecka: ' + fmt(currentWeek) + ' — ' + fmt(diff) + ' under riktmärket.';
+      else weekBudgetStatus.textContent = 'Aktuell vecka: ' + fmt(currentWeek) + ' — ' + fmt(Math.abs(diff)) + ' över riktmärket.';
     }
 
     const s1 = document.getElementById('weekCostSummary1');
-    const s2 = document.getElementById('weekCostSummary2');
-    const s3 = document.getElementById('weekCostSummary3');
-    const s4 = document.getElementById('weekCostSummary4');
-
-    // Nuvarande "Extra köp under månaden" hör till vecka 1.
-    if(s1) s1.textContent = fmt(week1 + extra);
-    if(s2) s2.textContent = fmt(week2);
-    if(s3) s3.textContent = fmt(week3);
-    if(s4) s4.textContent = fmt(week4);
+    if(s1) s1.textContent = fmt(currentWeek);
   }
 
-  function applyRow(row) {
-    if(!row) return;
-    currentRow = row;
-    setBoth(1, row.week1_cost);
-    setBoth(2, row.week2_cost);
-    setBoth(3, row.week3_cost);
-    setBoth(4, row.week4_cost);
-    const extra = document.getElementById('extraCost');
-    if(extra) extra.value = row.extra_cost || '';
-    applyChecks(row.checked_items || {});
-    refreshDashboard();
-  }
+  async function loadData(userId) {
+    document.getElementById('syncText').textContent = 'Synkar…';
 
-  async function loadData() {
-    const { data, error } = await sb.from('family_budget').select('*').eq('id', ROW_ID).single();
-    if(error) {
+    const { data: membership, error: membershipError } = await sb
+      .from('household_members')
+      .select('household_id')
+      .eq('user_id', userId)
+      .limit(1)
+      .single();
+
+    if(membershipError || !membership) {
+      console.error(membershipError);
       document.getElementById('syncText').textContent = 'Synkfel';
-      console.error(error);
       return;
     }
-    applyRow(data);
+    householdId = membership.household_id;
+
+    const { data: household, error: householdError } = await sb
+      .from('households')
+      .select('monthly_budget, weekly_target')
+      .eq('id', householdId)
+      .single();
+
+    if(householdError) {
+      console.error(householdError);
+      document.getElementById('syncText').textContent = 'Synkfel';
+      return;
+    }
+    monthBudget = Number(household.monthly_budget || 7000);
+    weeklyTarget = Number(household.weekly_target || 1200);
+
+    const { data: activeWeek, error: weekError } = await sb
+      .from('weeks')
+      .select('id, week_start, planned_budget')
+      .eq('household_id', householdId)
+      .eq('status', 'active')
+      .order('week_start', { ascending:false })
+      .limit(1)
+      .single();
+
+    if(weekError || !activeWeek) {
+      console.error(weekError);
+      document.getElementById('syncText').textContent = 'Ingen aktiv vecka';
+      return;
+    }
+    activeWeekId = activeWeek.id;
+    activeWeekStart = activeWeek.week_start;
+    weeklyTarget = Number(activeWeek.planned_budget || weeklyTarget);
+
+    const { data: expenses, error: expensesError } = await sb
+      .from('expenses')
+      .select('id, week_id, expense_date, category, amount')
+      .eq('household_id', householdId);
+
+    if(expensesError) {
+      console.error(expensesError);
+      document.getElementById('syncText').textContent = 'Synkfel';
+      return;
+    }
+
+    const now = new Date();
+    const monthPrefix = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-';
+    monthSpent = (expenses || [])
+      .filter(e => String(e.expense_date || '').startsWith(monthPrefix))
+      .reduce((sum,e)=>sum + Number(e.amount || 0),0);
+
+    const weekExpenses = (expenses || []).filter(e => e.week_id === activeWeekId);
+    const weekly = weekExpenses.find(e => e.category === 'weekly_shop');
+    const extra = weekExpenses.find(e => e.category === 'extra');
+    weeklyShopExpenseId = weekly?.id || null;
+    extraExpenseId = extra?.id || null;
+
+    const cost1 = document.getElementById('cost1');
+    const extraInput = document.getElementById('extraCost');
+    if(cost1) cost1.value = weekly ? Number(weekly.amount || 0) : '';
+    if(extraInput) extraInput.value = extra ? Number(extra.amount || 0) : '';
+
+    const { data: shopping, error: shoppingError } = await sb
+      .from('shopping_items')
+      .select('id, checked, sort_order')
+      .eq('week_id', activeWeekId)
+      .order('sort_order', { ascending:true });
+
+    if(!shoppingError) applyChecks(shopping || []);
+    refreshDashboard();
     document.getElementById('syncText').textContent = 'Synkad';
   }
 
+  async function saveExpense(category, amount) {
+    const currentId = category === 'weekly_shop' ? weeklyShopExpenseId : extraExpenseId;
+    const description = category === 'weekly_shop' ? 'Veckohandling' : 'Extra köp';
+
+    if(currentId) {
+      const { error } = await sb.from('expenses').update({ amount }).eq('id', currentId);
+      if(error) throw error;
+      return currentId;
+    }
+
+    const { data, error } = await sb.from('expenses').insert({
+      household_id: householdId,
+      week_id: activeWeekId,
+      expense_date: new Date().toISOString().slice(0,10),
+      category,
+      description,
+      amount
+    }).select('id').single();
+
+    if(error) throw error;
+    if(category === 'weekly_shop') weeklyShopExpenseId = data.id;
+    else extraExpenseId = data.id;
+    return data.id;
+  }
+
   async function saveData() {
-    const payload = {
-      week1_cost: readNum('cost1'),
-      week2_cost: readNum('cost2'),
-      week3_cost: readNum('cost3'),
-      week4_cost: readNum('cost4'),
-      extra_cost: readNum('extraCost'),
-      checked_items: collectChecks(),
-      updated_at: new Date().toISOString()
-    };
+    if(!householdId || !activeWeekId) return;
     document.getElementById('syncText').textContent = 'Sparar…';
-    const { error } = await sb.from('family_budget').update(payload).eq('id', ROW_ID);
-    if(error) {
+    try {
+      await Promise.all([
+        saveExpense('weekly_shop', readNum('cost1')),
+        saveExpense('extra', readNum('extraCost'))
+      ]);
+      const { data: expenses } = await sb.from('expenses').select('expense_date,amount').eq('household_id',householdId);
+      const now = new Date();
+      const monthPrefix = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-';
+      monthSpent = (expenses || []).filter(e => String(e.expense_date || '').startsWith(monthPrefix)).reduce((s,e)=>s+Number(e.amount||0),0);
+      refreshDashboard();
+      document.getElementById('syncText').textContent = 'Synkad';
+    } catch(error) {
       console.error(error);
       document.getElementById('syncText').textContent = 'Kunde inte spara';
-    } else {
-      document.getElementById('syncText').textContent = 'Synkad';
     }
   }
 
   function scheduleSave() {
+    const currentWeek = readNum('cost1') + readNum('extraCost');
+    const existingWeek = (document.getElementById('currentWeekTotal')?.textContent || '');
     refreshDashboard();
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveData, 350);
+    saveTimer = setTimeout(saveData, 400);
   }
 
   async function handleSession(session) {
@@ -449,7 +494,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       loggedIn.classList.remove('hidden');
       document.getElementById('userEmail').textContent = session.user.email || '';
       setLocked(false);
-      await loadData();
+      await loadData(session.user.id);
     } else {
       loggedOut.classList.remove('hidden');
       loggedIn.classList.add('hidden');
@@ -478,21 +523,26 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     await handleSession(null);
   });
 
-  for(let n=1;n<=4;n++) {
-    const overview = document.getElementById('cost'+n);
-
-    if(overview) overview.addEventListener('input', e => {
-      setBoth(n, e.target.value, e.target);
-      scheduleSave();
-    });
-  }
+  document.getElementById('cost1')?.addEventListener('input', scheduleSave);
   document.getElementById('extraCost')?.addEventListener('input', scheduleSave);
-  document.querySelectorAll('.shop input[type="checkbox"]').forEach(cb => cb.addEventListener('change', scheduleSave));
 
-  sb.channel('family-budget-live')
-    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'family_budget', filter:'id=eq.1' }, payload => {
-      applyRow(payload.new);
-      document.getElementById('syncText').textContent = 'Synkad';
+  document.querySelectorAll('#v1 .shop input[type="checkbox"]').forEach(cb => cb.addEventListener('change', async e => {
+    const id = e.target.dataset.itemId;
+    if(!id) return;
+    document.getElementById('syncText').textContent = 'Sparar…';
+    const { error } = await sb.from('shopping_items').update({checked:e.target.checked}).eq('id',id);
+    document.getElementById('syncText').textContent = error ? 'Kunde inte spara' : 'Synkad';
+  }));
+
+  sb.channel('rolling-meal-plan-live')
+    .on('postgres_changes', { event:'*', schema:'public', table:'expenses' }, async payload => {
+      const { data: sessionData } = await sb.auth.getSession();
+      if(sessionData.session?.user) await loadData(sessionData.session.user.id);
+    })
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'shopping_items' }, async payload => {
+      if(!activeWeekId || payload.new.week_id !== activeWeekId) return;
+      const cb = document.querySelector('input[data-item-id="' + payload.new.id + '"]');
+      if(cb) cb.checked = !!payload.new.checked;
     })
     .subscribe();
 
