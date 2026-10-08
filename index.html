@@ -105,6 +105,9 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .next-steps b{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#203040;color:#fff;font-size:12px}
 .next-note{margin-top:11px;background:#fff7e6;border-radius:12px;padding:10px 11px;font-size:12.5px;font-weight:700}
 .legacy-future{display:none!important}
+
+.loading-copy,.empty-copy{padding:14px 2px;color:#6f777b;font-size:14px}
+.week-date{font-size:12px;color:#6f777b;margin-top:2px}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a>
@@ -173,25 +176,33 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   </div>
 </section>
 <section class="week locked" id="v1">
-    <details class="week-fold" open>
-      <summary><span>Aktuell vecka</span><small class="week-state current">Nu</small></summary>
-      <div class="week-inner">
-        
-    
-    <div class="hero">
-      <div class="metric"><span>Vecka 1</span><b>1 200 kr</b></div>
-      <div class="metric"><span>Månadsbudget</span><b>7 000 kr</b></div>
-    </div>
-    <div class="card"><h2>Vecka 1 – middagar</h2><div class="note"><b>Frukost hela veckan:</b> Bröd med ost eller skinka, yoghurt med banan eller äpple, mjölk, juice, ägg ibland och gröt vid behov.</div><div class="day"><div class="weekday">Måndag</div><div class="meal">Kyckling i ugn med potatis och morötter</div><div class="ingredients">600 g kyckling, ca 1 kg potatis, 3–4 morötter, 1 gul lök, crème fraîche, olja, salt, peppar och gärna paprika/örter.</div><div class="tip">Lägg allt på en plåt och servera med kall crème fraîche-sås.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Värm ugnen till 225°C.</li><li>Skär potatis, morötter och lök och lägg på plåt med olja, salt och peppar.</li><li>Krydda kycklingen och lägg på plåten.</li><li>Tillaga 25–35 min.</li><li>Blanda crème fraîche med salt, peppar och gärna vitlök eller örter.</li></ol></details></div><div class="day"><div class="weekday">Tisdag</div><div class="meal">Köttfärssås med spaghetti</div><div class="ingredients">700 g köttfärs, spaghetti, 1 gul lök, vitlök, 2 paket krossade tomater, gärna 1 riven morot, oregano/basilika.</div><div class="tip">Gör gärna lite extra så det finns lunchrester.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Fräs lök och vitlök.</li><li>Bryn köttfärsen.</li><li>Tillsätt krossade tomater och gärna riven morot.</li><li>Krydda och låt puttra 15–20 min.</li><li>Koka spaghetti och servera.</li></ol></details></div><div class="day"><div class="weekday">Onsdag</div><div class="meal">Kycklingcurry med ris</div><div class="ingredients">500 g kyckling, ris, 1 gul lök, 1 paprika, matlagningsgrädde, curry, salt, peppar och broccoli.</div><div class="tip">Broccoli kan blandas ner eller serveras bredvid.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka riset.</li><li>Stek kyckling, lök och paprika.</li><li>Tillsätt curry.</li><li>Häll på grädde och låt sjuda ca 10 min.</li><li>Servera med broccoli.</li></ol></details></div><div class="day"><div class="weekday">Torsdag</div><div class="meal">Lax med potatis, ärtor och kall sås</div><div class="ingredients">700–800 g lax, ca 800 g potatis, frysta ärtor och crème fraîche. Citron om ni har hemma.</div><div class="tip">En enkel och snabb vardagsmiddag.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka potatisen.</li><li>Tillaga laxen i 200°C ca 15–20 min.</li><li>Koka ärtorna kort.</li><li>Blanda crème fraîche med citron, salt och peppar.</li><li>Servera tillsammans.</li></ol></details></div><div class="day"><div class="weekday">Fredag</div><div class="meal">Tacos</div><div class="ingredients">500 g köttfärs, tortillas, sallad, gurka, tomat, majs, paprika, ost, crème fraîche och tacokrydda.</div><div class="tip">Använd gärna upp grönsaker från tidigare i veckan.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Stek köttfärsen och krydda.</li><li>Hacka grönsakerna.</li><li>Värm tortillas.</li><li>Ställ fram ost, majs och crème fraîche.</li><li>Låt alla bygga sina egna tacos.</li></ol></details></div><div class="day"><div class="weekday">Lördag</div><div class="meal">Korv stroganoff med ris</div><div class="ingredients">600–800 g falukorv, 1 gul lök, matlagningsgrädde eller crème fraîche, ketchup/tomatpuré och ris.</div><div class="tip">Det som blir över fungerar bra som lunch.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka riset.</li><li>Stek korv och lök.</li><li>Tillsätt ketchup eller tomatpuré.</li><li>Häll på grädde.</li><li>Låt sjuda ca 10 min.</li></ol></details></div><div class="day"><div class="weekday">Söndag</div><div class="meal">Krämig kycklingpasta med vitlöksbröd</div><div class="ingredients">Ca 600 g kyckling, pasta, 1 gul lök, vitlök, matlagningsgrädde, ost och bröd till vitlöksbröd.</div><div class="tip">Lite mer söndagskänsla men fortfarande enkelt.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka pastan.</li><li>Stek kycklingen.</li><li>Tillsätt lök och vitlök.</li><li>Häll på grädde och rör ner ost.</li><li>Blanda med pastan och servera med vitlöksbröd.</li></ol></details></div></div><div class='card'><h2>Vecka 1 – inköpslista</h2><div class='section-title'>Kött & fisk</div><label class="shop"><input type="checkbox"><span class="name">Kyckling</span><span class="qty">ca 1,7 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Köttfärs</span><span class="qty">1,2 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Lax</span><span class="qty">700–800 g</span></label><label class="shop"><input type="checkbox"><span class="name">Falukorv</span><span class="qty">ca 800 g</span></label><div class='section-title'>Mejeri & frukost</div><label class="shop"><input type="checkbox"><span class="name">Mjölk</span><span class="qty">5 liter</span></label><label class="shop"><input type="checkbox"><span class="name">Yoghurt</span><span class="qty">2 stora</span></label><label class="shop"><input type="checkbox"><span class="name">Juice</span><span class="qty">2 liter</span></label><label class="shop"><input type="checkbox"><span class="name">Ost</span><span class="qty">700–800 g</span></label><label class="shop"><input type="checkbox"><span class="name">Skinka</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Smör</span><span class="qty">500 g</span></label><label class="shop"><input type="checkbox"><span class="name">Crème fraîche</span><span class="qty">2 burkar</span></label><label class="shop"><input type="checkbox"><span class="name">Matlagningsgrädde</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Ägg</span><span class="qty">15-pack</span></label><div class='section-title'>Bröd</div><label class="shop"><input type="checkbox"><span class="name">Bröd</span><span class="qty">3 limpor</span></label><label class="shop"><input type="checkbox"><span class="name">Knäckebröd</span><span class="qty">1 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Havregryn</span><span class="qty">1 paket</span></label><div class='section-title'>Frukt & grönt</div><label class="shop"><input type="checkbox"><span class="name">Potatis</span><span class="qty">ca 3 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Morötter</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Gul lök</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Vitlök</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Paprika</span><span class="qty">2–3 st</span></label><label class="shop"><input type="checkbox"><span class="name">Gurka</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Tomater</span><span class="qty">1 ask</span></label><label class="shop"><input type="checkbox"><span class="name">Sallad</span><span class="qty">1 påse</span></label><label class="shop"><input type="checkbox"><span class="name">Broccoli</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Bananer</span><span class="qty">ca 1,5 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Äpplen</span><span class="qty">ca 1,5 kg</span></label><div class='section-title'>Skafferi</div><label class="shop"><input type="checkbox"><span class="name">Ris</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Spaghetti/pasta</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Tortillas</span><span class="qty">1 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Krossade tomater</span><span class="qty">3 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Majs</span><span class="qty">1 burk</span></label><label class="shop"><input type="checkbox"><span class="name">Frysta ärtor</span><span class="qty">1 påse</span></label><label class="shop"><input type="checkbox"><span class="name">Tacokrydda</span><span class="qty">1 påse</span></label><label class="shop"><input type="checkbox"><span class="name">Curry</span><span class="qty">vid behov</span></label><a class="toplink" href="#top">Till toppen</a></div>
-        
-    <div class="week-cost">
-      <label>Faktisk kostnad vecka 1
-        <strong id="weekCostSummary1">0 kr</strong>
-      </label>
-    </div>
+  <details class="week-fold" open>
+    <summary><span>Aktuell vecka</span><small class="week-state current">Nu</small></summary>
+    <div class="week-inner">
+      <div class="hero">
+        <div class="metric"><span id="activeWeekLabel">Aktuell vecka</span><b id="activeWeekTarget">1 200 kr</b></div>
+        <div class="metric"><span>Månadsbudget</span><b id="activeMonthBudget">7 000 kr</b></div>
       </div>
-    </details>
-  </section>
+
+      <div class="card" id="mealsCard">
+        <h2>Veckans middagar</h2>
+        <div class="note"><b>Frukost hela veckan:</b> Bröd med ost eller skinka, yoghurt, mjölk, juice, frukt och ägg/gröt vid behov.</div>
+        <div id="mealsList"><div class="loading-copy">Laddar veckans meny…</div></div>
+      </div>
+
+      <div class="card shopping-card" id="shoppingCard">
+        <h2>Veckans inköpslista</h2>
+        <div id="shoppingList"><div class="loading-copy">Laddar inköpslistan…</div></div>
+      </div>
+
+      <div class="week-cost">
+        <label>Faktisk kostnad aktuell vecka
+          <strong id="weekCostSummary1">0 kr</strong>
+        </label>
+      </div>
+    </div>
+  </details>
+</section>
 <section class="rolling-next locked" id="nextWeek">
   <div class="next-card">
     <div class="next-top">
@@ -211,64 +222,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   </div>
 </section>
 
-<section class="week locked legacy-future" id="v2">
-    <details class="week-fold">
-      <summary><span>Vecka 2</span><small class="week-state">Kommande</small></summary>
-      <div class="week-inner">
-        
-    
-    <div class="hero">
-      <div class="metric"><span>Vecka 2</span><b>1 200 kr</b></div>
-      <div class="metric"><span>Månadsbudget</span><b>7 000 kr</b></div>
-    </div>
-    <div class="card"><h2>Vecka 2 – middagar</h2><div class="note"><b>Frukost hela veckan:</b> Bröd med ost eller skinka, yoghurt, mjölk, juice, frukt och ägg vid behov.</div><div class="day"><div class="weekday">Måndag</div><div class="meal">Pannbiff med potatis och gräddsås</div><div class="ingredients">800 g köttfärs, ca 1 kg potatis, 1 gul lök, matlagningsgrädde, lingonsylt, salt och peppar.</div><div class="tip">Forma biffar och gör enkel gräddsås i samma panna.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka potatisen.</li><li>Blanda färs med lök, salt och peppar och forma biffar.</li><li>Stek biffarna.</li><li>Gör gräddsås i samma panna.</li><li>Servera med lingonsylt.</li></ol></details></div><div class="day"><div class="weekday">Tisdag</div><div class="meal">Kycklingfajitas</div><div class="ingredients">700–800 g kyckling, tortillas, 3 paprika, 1 gul lök, sallad, gurka, tomat och crème fraîche.</div><div class="tip">Stek kyckling med paprika och lök.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Strimla kyckling, paprika och lök.</li><li>Stek kycklingen.</li><li>Tillsätt paprika och lök.</li><li>Krydda.</li><li>Servera i tortillas med grönsaker och crème fraîche.</li></ol></details></div><div class="day"><div class="weekday">Onsdag</div><div class="meal">Krämig skinkpasta med ärtor</div><div class="ingredients">300–400 g skinka, pasta, frysta ärtor, 1 gul lök och matlagningsgrädde.</div><div class="tip">Snabb vardagsrätt.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka pastan.</li><li>Fräs lök.</li><li>Tillsätt skinka och ärtor.</li><li>Häll på grädde.</li><li>Vänd ner pastan och smaka av.</li></ol></details></div><div class="day"><div class="weekday">Torsdag</div><div class="meal">Fisk med potatis och kall sås</div><div class="ingredients">700–800 g vit fisk, ca 800 g potatis, morötter och crème fraîche.</div><div class="tip">Ugnsbaka fisken.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka potatisen.</li><li>Tillaga fisken i 200°C ca 15–20 min.</li><li>Servera med morötter.</li><li>Blanda crème fraîche med citron eller örter.</li><li>Servera tillsammans.</li></ol></details></div><div class="day"><div class="weekday">Fredag</div><div class="meal">Hemmagjord pizza</div><div class="ingredients">800 g köttfärs eller valfri topping, pizzadeg/kit, tomatsås, ost, tomat och lök.</div><div class="tip">Gör gärna två plåtar.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Sätt ugnen på 250°C.</li><li>Rulla ut degen och bred på tomatsås.</li><li>Lägg på topping och ost.</li><li>Grädda 10–15 min.</li><li>Låt vila någon minut.</li></ol></details></div><div class="day"><div class="weekday">Lördag</div><div class="meal">Fläskytterfilé med ugnsrostad potatis och gräddsås</div><div class="ingredients">Ca 800 g fläskytterfilé, ca 1 kg potatis, matlagningsgrädde, 1 gul lök, morötter och gärna lite senap eller soja.</div><div class="tip">Känns mer som helgmiddag men är fortfarande ganska prisvärd.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Rosta potatis och morötter i 225°C ca 30–35 min.</li><li>Skär köttet i medaljonger och bryn.</li><li>Stek färdigt på lägre värme.</li><li>Gör sås i pannan med grädde och soja eller senap.</li><li>Servera tillsammans.</li></ol></details></div><div class="day"><div class="weekday">Söndag</div><div class="meal">Lasagne med sallad och vitlöksbröd</div><div class="ingredients">Ca 700 g köttfärs, lasagneplattor, 2 paket krossade tomater, 1 gul lök, mjölk, ost och bröd till vitlöksbröd.</div><div class="tip">Bra söndagsmiddag och perfekt att göra extra av till matlådor.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Bryn köttfärs och lök.</li><li>Tillsätt krossade tomater och kryddor.</li><li>Varva köttfärssås, lasagneplattor och ostsås.</li><li>Toppa med ost och grädda i 200°C 30–40 min.</li><li>Servera med sallad och vitlöksbröd.</li></ol></details></div></div><div class='card'><h2>Vecka 2 – inköpslista</h2><div class='section-title'>Kött & fisk</div><label class="shop"><input type="checkbox"><span class="name">Köttfärs</span><span class="qty">ca 2,3 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Kyckling</span><span class="qty">700–800 g</span></label><label class="shop"><input type="checkbox"><span class="name">Skinka</span><span class="qty">300–400 g</span></label><label class="shop"><input type="checkbox"><span class="name">Vit fisk</span><span class="qty">700–800 g</span></label><label class="shop"><input type="checkbox"><span class="name">Fläskytterfilé</span><span class="qty">ca 800 g</span></label><div class='section-title'>Mejeri & frukost</div><label class="shop"><input type="checkbox"><span class="name">Mjölk</span><span class="qty">5 liter</span></label><label class="shop"><input type="checkbox"><span class="name">Yoghurt</span><span class="qty">2 stora</span></label><label class="shop"><input type="checkbox"><span class="name">Juice</span><span class="qty">2 liter</span></label><label class="shop"><input type="checkbox"><span class="name">Ost</span><span class="qty">600–700 g</span></label><label class="shop"><input type="checkbox"><span class="name">Smör</span><span class="qty">500 g</span></label><label class="shop"><input type="checkbox"><span class="name">Crème fraîche</span><span class="qty">2 burkar</span></label><label class="shop"><input type="checkbox"><span class="name">Matlagningsgrädde</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Ägg</span><span class="qty">15-pack</span></label><div class='section-title'>Bröd</div><label class="shop"><input type="checkbox"><span class="name">Bröd</span><span class="qty">3 limpor</span></label><div class='section-title'>Frukt & grönt</div><label class="shop"><input type="checkbox"><span class="name">Potatis</span><span class="qty">ca 3 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Morötter</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Gul lök</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Paprika</span><span class="qty">3 st</span></label><label class="shop"><input type="checkbox"><span class="name">Gurka</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Tomater</span><span class="qty">1 ask</span></label><label class="shop"><input type="checkbox"><span class="name">Sallad</span><span class="qty">1 påse</span></label><label class="shop"><input type="checkbox"><span class="name">Bananer</span><span class="qty">1,5 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Äpplen/päron</span><span class="qty">1,5 kg</span></label><div class='section-title'>Skafferi</div><label class="shop"><input type="checkbox"><span class="name">Pasta</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Tortillas</span><span class="qty">1 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Pizzakit eller deg + tomatsås</span><span class="qty">1–2</span></label><label class="shop"><input type="checkbox"><span class="name">Mjöl</span><span class="qty">vid behov</span></label><label class="shop"><input type="checkbox"><span class="name">Sylt</span><span class="qty">vid behov</span></label><label class="shop"><input type="checkbox"><span class="name">Frysta ärtor</span><span class="qty">1 påse</span></label><label class="shop"><input type="checkbox"><span class="name">Lasagneplattor</span><span class="qty">1 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Krossade tomater</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Lingonsylt</span><span class="qty">1 burk</span></label><a class="toplink" href="#top">Till toppen</a></div>
-        
-    <div class="week-cost">
-      <label>Faktisk kostnad vecka 2
-        <strong id="weekCostSummary2">0 kr</strong>
-      </label>
-    </div>
-      </div>
-    </details>
-  </section><section class="week locked legacy-future" id="v3">
-    <details class="week-fold">
-      <summary><span>Vecka 3</span><small class="week-state">Senare</small></summary>
-      <div class="week-inner">
-        
-    
-    <div class="hero">
-      <div class="metric"><span>Vecka 3</span><b>1 200 kr</b></div>
-      <div class="metric"><span>Månadsbudget</span><b>7 000 kr</b></div>
-    </div>
-    <div class="card"><h2>Vecka 3 – middagar</h2><div class="note"><b>Frukost hela veckan:</b> Bröd med ost eller skinka, yoghurt, mjölk, juice, frukt och ägg/gröt efter behov.</div><div class="day"><div class="weekday">Måndag</div><div class="meal">Krämig kycklingpasta</div><div class="ingredients">900 g kyckling, pasta, broccoli, 1 gul lök, matlagningsgrädde och vitlök.</div><div class="tip">Broccoli kan blandas direkt i såsen.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka pastan.</li><li>Stek kycklingen.</li><li>Tillsätt lök, vitlök och broccoli.</li><li>Häll på grädde.</li><li>Blanda ner pastan och smaka av.</li></ol></details></div><div class="day"><div class="weekday">Tisdag</div><div class="meal">Chili con carne med ris</div><div class="ingredients">700 g köttfärs, ris, 2 burkar bönor, 2 paket krossade tomater, 1 gul lök, 1 paprika och kryddor.</div><div class="tip">Gör gärna stor gryta.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka riset.</li><li>Bryn köttfärs och lök.</li><li>Tillsätt paprika, bönor och krossade tomater.</li><li>Krydda.</li><li>Låt puttra 15–20 min.</li></ol></details></div><div class="day"><div class="weekday">Onsdag</div><div class="meal">Ugnslax med potatis</div><div class="ingredients">700–800 g lax, ca 1 kg potatis, morötter och valfri kall sås.</div><div class="tip">Enkel plåtmiddag.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Rosta potatis och morötter i 200°C ca 15 min.</li><li>Lägg på laxen och krydda.</li><li>Tillaga ytterligare 15–20 min.</li><li>Gör gärna en kall sås.</li><li>Servera.</li></ol></details></div><div class="day"><div class="weekday">Torsdag</div><div class="meal">Falukorv i ugn med potatismos</div><div class="ingredients">Ca 800 g falukorv, ca 1 kg potatis, mjölk, smör och lök.</div><div class="tip">Klassisk familjemat.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Sätt ugnen på 200°C.</li><li>Skåra falukorven och lägg i form.</li><li>Tillaga ca 20 min.</li><li>Koka potatis och gör mos.</li><li>Servera tillsammans.</li></ol></details></div><div class="day"><div class="weekday">Fredag</div><div class="meal">Hamburgare med klyftpotatis</div><div class="ingredients">700 g köttfärs, hamburgerbröd, ca 1 kg potatis, sallad, gurka och tomat.</div><div class="tip">Forma egna burgare.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Rosta klyftpotatis i 225°C.</li><li>Forma burgare.</li><li>Stek på hög värme.</li><li>Värm bröden.</li><li>Servera med grönsaker och dressing.</li></ol></details></div><div class="day"><div class="weekday">Lördag</div><div class="meal">Hemmagjorda smashburgare med klyftpotatis</div><div class="ingredients">Ca 700 g köttfärs, hamburgerbröd, ca 1 kg potatis, ost, sallad, gurka, tomat och valfri dressing.</div><div class="tip">Gör tunna burgare i riktigt varm panna och servera med krispig klyftpotatis.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Rosta klyftpotatis i 225°C.</li><li>Dela färsen i lösa bollar.</li><li>Pressa dem tunna i het panna.</li><li>Vänd när kanten är krispig och lägg på ost.</li><li>Servera i bröd med grönsaker och dressing.</li></ol></details></div><div class="day"><div class="weekday">Söndag</div><div class="meal">Kycklinggratäng med bacon och ris</div><div class="ingredients">Ca 900 g kyckling, 2 paket bacon, ris, 1 gul lök, matlagningsgrädde, ost och gärna broccoli eller paprika.</div><div class="tip">Krämig söndagsmiddag som går att förbereda och sedan bara gratinera.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka riset.</li><li>Bryn kycklingen och stek bacon.</li><li>Lägg i ugnsform med lök och grönsaker.</li><li>Häll över grädde och strö på ost.</li><li>Gratinera i 200°C ca 20 min.</li></ol></details></div></div><div class='card'><h2>Vecka 3 – inköpslista</h2><div class='section-title'>Kött & fisk</div><label class="shop"><input type="checkbox"><span class="name">Kyckling</span><span class="qty">ca 1,8 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Köttfärs</span><span class="qty">ca 2,1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Lax</span><span class="qty">700–800 g</span></label><label class="shop"><input type="checkbox"><span class="name">Falukorv</span><span class="qty">ca 800 g</span></label><label class="shop"><input type="checkbox"><span class="name">Bacon</span><span class="qty">2 paket</span></label><div class='section-title'>Mejeri & frukost</div><label class="shop"><input type="checkbox"><span class="name">Mjölk</span><span class="qty">5 liter</span></label><label class="shop"><input type="checkbox"><span class="name">Yoghurt</span><span class="qty">2 stora</span></label><label class="shop"><input type="checkbox"><span class="name">Juice</span><span class="qty">2 liter</span></label><label class="shop"><input type="checkbox"><span class="name">Ost</span><span class="qty">700 g</span></label><label class="shop"><input type="checkbox"><span class="name">Skinka</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Matlagningsgrädde</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Ägg</span><span class="qty">15-pack</span></label><div class='section-title'>Bröd</div><label class="shop"><input type="checkbox"><span class="name">Bröd</span><span class="qty">3 limpor</span></label><div class='section-title'>Frukt & grönt</div><label class="shop"><input type="checkbox"><span class="name">Potatis</span><span class="qty">ca 3 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Morötter</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Gul lök</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Vitlök</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Broccoli</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Paprika</span><span class="qty">2 st</span></label><label class="shop"><input type="checkbox"><span class="name">Gurka</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Tomater</span><span class="qty">1 ask</span></label><label class="shop"><input type="checkbox"><span class="name">Sallad</span><span class="qty">1 påse</span></label><label class="shop"><input type="checkbox"><span class="name">Bananer</span><span class="qty">1,5 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Äpplen/päron</span><span class="qty">1,5 kg</span></label><div class='section-title'>Skafferi</div><label class="shop"><input type="checkbox"><span class="name">Pasta</span><span class="qty">1 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Ris</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Bönor</span><span class="qty">2 burkar</span></label><label class="shop"><input type="checkbox"><span class="name">Krossade tomater</span><span class="qty">4 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Hamburgerbröd</span><span class="qty">2 paket</span></label><a class="toplink" href="#top">Till toppen</a></div>
-        
-    <div class="week-cost">
-      <label>Faktisk kostnad vecka 3
-        <strong id="weekCostSummary3">0 kr</strong>
-      </label>
-    </div>
-      </div>
-    </details>
-  </section><section class="week locked legacy-future" id="v4">
-    <details class="week-fold">
-      <summary><span>Vecka 4</span><small class="week-state">Senare</small></summary>
-      <div class="week-inner">
-        
-    
-    <div class="hero">
-      <div class="metric"><span>Vecka 4</span><b>1 200 kr</b></div>
-      <div class="metric"><span>Månadsbudget</span><b>7 000 kr</b></div>
-    </div>
-    <div class="card"><h2>Vecka 4 – middagar</h2><div class="note"><b>Frukost hela veckan:</b> Bröd med ost eller skinka, yoghurt, mjölk, juice, frukt och ägg/gröt efter behov.</div><div class="day"><div class="weekday">Måndag</div><div class="meal">Köttbullar med potatis och sås</div><div class="ingredients">Ca 1 kg köttbullar, ca 1 kg potatis, gräddsås, morötter och lingonsylt om ni har hemma.</div><div class="tip">Enkel start på veckan.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka potatisen.</li><li>Stek köttbullarna.</li><li>Gör gräddsås i pannan.</li><li>Servera med grönsaker.</li><li>Lägg till lingonsylt.</li></ol></details></div><div class="day"><div class="weekday">Tisdag</div><div class="meal">Kycklingcurry med ris</div><div class="ingredients">Ca 1 kg kyckling, ris, 1 gul lök, 1 paprika, grädde eller matlagningsgrädde och curry.</div><div class="tip">Gör gärna extra.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka riset.</li><li>Stek kyckling, lök och paprika.</li><li>Tillsätt curry.</li><li>Häll på grädde och låt sjuda ca 10 min.</li><li>Servera med broccoli.</li></ol></details></div><div class="day"><div class="weekday">Onsdag</div><div class="meal">Fiskgratäng</div><div class="ingredients">700–800 g vit fisk, ca 1 kg potatis, grädde, broccoli och morötter.</div><div class="tip">Kan göras med potatismos ovanpå.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka potatis och gör mos.</li><li>Lägg fisken i ugnsform.</li><li>Häll över grädde eller vit sås och lägg i broccoli.</li><li>Lägg potatismos runt kanten.</li><li>Gratinera i 200°C ca 25 min.</li></ol></details></div><div class="day"><div class="weekday">Torsdag</div><div class="meal">Spaghetti carbonara</div><div class="ingredients">2 paket bacon, spaghetti, 4–5 ägg, grädde, ost och svartpeppar.</div><div class="tip">Snabb vardagsrätt.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka spaghetti.</li><li>Stek bacon knaprigt.</li><li>Vispa ihop ägg, ost och svartpeppar.</li><li>Ta pastan från värmen och blanda med bacon och äggblandning.</li><li>Späd med lite pastavatten.</li></ol></details></div><div class="day"><div class="weekday">Fredag</div><div class="meal">Tacos</div><div class="ingredients">700 g köttfärs, tortillas, sallad, gurka, tomat, paprika, majs, ost, crème fraîche och tacokrydda.</div><div class="tip">Fredagsklassiker.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Stek köttfärsen och krydda.</li><li>Hacka grönsakerna.</li><li>Värm tortillas.</li><li>Ställ fram ost, majs och crème fraîche.</li><li>Låt alla bygga sina egna tacos.</li></ol></details></div><div class="day"><div class="weekday">Lördag</div><div class="meal">Hemmagjord pizza med mozzarella och valfri topping</div><div class="ingredients">Pizzadeg eller pizzakit, tomatsås, mozzarella/ost, skinka eller ca 400 g köttfärs, tomat och lök.</div><div class="tip">Gör gärna två olika pizzor så känns det lite mer som lördagsmiddag.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Sätt ugnen på 250°C.</li><li>Rulla ut degen och bred på tomatsås.</li><li>Lägg på mozzarella och topping.</li><li>Grädda 10–15 min.</li><li>Låt vila kort.</li></ol></details></div><div class="day"><div class="weekday">Söndag</div><div class="meal">Krämig fläskytterfilégryta med potatis eller ris</div><div class="ingredients">Ca 800 g fläskytterfilé, 1 gul lök, champinjoner om ni gillar det, matlagningsgrädde, soja, lite senap och potatis eller ris.</div><div class="tip">En riktig söndagsmiddag som fortfarande är enkel att laga i en gryta.</div><details class="recipe-details"><summary>Visa recept</summary><ol><li>Koka potatis eller ris.</li><li>Strimla och bryn köttet.</li><li>Tillsätt lök och champinjoner.</li><li>Häll på grädde och smaka av med soja och senap.</li><li>Låt sjuda 10–15 min.</li></ol></details></div></div><div class='card'><h2>Vecka 4 – inköpslista</h2><div class='section-title'>Kött & fisk</div><label class="shop"><input type="checkbox"><span class="name">Köttbullar</span><span class="qty">ca 1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Kyckling</span><span class="qty">ca 1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Vit fisk</span><span class="qty">700–800 g</span></label><label class="shop"><input type="checkbox"><span class="name">Köttfärs</span><span class="qty">ca 1,1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Bacon</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Fläskytterfilé</span><span class="qty">ca 800 g</span></label><div class='section-title'>Mejeri & frukost</div><label class="shop"><input type="checkbox"><span class="name">Mjölk</span><span class="qty">5 liter</span></label><label class="shop"><input type="checkbox"><span class="name">Yoghurt</span><span class="qty">2 stora</span></label><label class="shop"><input type="checkbox"><span class="name">Juice</span><span class="qty">2 liter</span></label><label class="shop"><input type="checkbox"><span class="name">Ost</span><span class="qty">700 g</span></label><label class="shop"><input type="checkbox"><span class="name">Skinka</span><span class="qty">2 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Smör</span><span class="qty">500 g</span></label><label class="shop"><input type="checkbox"><span class="name">Grädde/matlagningsgrädde</span><span class="qty">3 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Crème fraîche</span><span class="qty">1 burk</span></label><label class="shop"><input type="checkbox"><span class="name">Ägg</span><span class="qty">15-pack</span></label><div class='section-title'>Bröd</div><label class="shop"><input type="checkbox"><span class="name">Bröd</span><span class="qty">3 limpor</span></label><div class='section-title'>Frukt & grönt</div><label class="shop"><input type="checkbox"><span class="name">Potatis</span><span class="qty">ca 3 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Morötter</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Gul lök</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Broccoli</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Gurka</span><span class="qty">1 st</span></label><label class="shop"><input type="checkbox"><span class="name">Tomater</span><span class="qty">1 ask</span></label><label class="shop"><input type="checkbox"><span class="name">Paprika</span><span class="qty">2 st</span></label><label class="shop"><input type="checkbox"><span class="name">Sallad</span><span class="qty">1 påse</span></label><label class="shop"><input type="checkbox"><span class="name">Bananer</span><span class="qty">1,5 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Äpplen/päron</span><span class="qty">1,5 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Champinjoner</span><span class="qty">250 g, valfritt</span></label><div class='section-title'>Skafferi</div><label class="shop"><input type="checkbox"><span class="name">Ris</span><span class="qty">1 kg</span></label><label class="shop"><input type="checkbox"><span class="name">Spaghetti</span><span class="qty">1 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Tortillas</span><span class="qty">1 paket</span></label><label class="shop"><input type="checkbox"><span class="name">Tacokrydda</span><span class="qty">1 påse</span></label><label class="shop"><input type="checkbox"><span class="name">Majs</span><span class="qty">1 burk</span></label><label class="shop"><input type="checkbox"><span class="name">Pizzakit eller hamburgerbröd</span><span class="qty">1</span></label><label class="shop"><input type="checkbox"><span class="name">Mjöl</span><span class="qty">vid behov</span></label><label class="shop"><input type="checkbox"><span class="name">Sylt</span><span class="qty">vid behov</span></label><a class="toplink" href="#top">Till toppen</a></div>
-        
-    <div class="week-cost">
-      <label>Faktisk kostnad vecka 4
-        <strong id="weekCostSummary4">0 kr</strong>
-      </label>
-    </div>
-      </div>
-    </details>
-  </section></main>
+</main>
 
 
 
@@ -302,15 +256,97 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     return el ? (parseFloat(el.value) || 0) : 0;
   }
 
-  function applyChecks(items) {
-    const boxes = [...document.querySelectorAll('#v1 .shopping-card .shop input[type="checkbox"], #v1 .shop input[type="checkbox"]')];
-    boxes.forEach((cb, i) => {
-      const item = items?.[i];
-      if(!item) return;
-      cb.checked = !!item.checked;
-      cb.dataset.itemId = item.id;
-    });
+  const escapeHtml = value => String(value ?? '')
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+    .replaceAll('"','&quot;').replaceAll("'","&#039;");
+
+  function formatWeekLabel(start) {
+    if(!start) return 'Aktuell vecka';
+    const d = new Date(start + 'T12:00:00');
+    const end = new Date(d);
+    end.setDate(end.getDate() + 6);
+    const opts = { day:'numeric', month:'short' };
+    return d.toLocaleDateString('sv-SE', opts) + '–' + end.toLocaleDateString('sv-SE', opts);
   }
+
+  function refreshShoppingProgress() {
+    const items = [...document.querySelectorAll('#shoppingList .shop input[type="checkbox"]')];
+    const done = items.filter(cb => cb.checked).length;
+    const total = items.length;
+    const text = document.getElementById('shoppingProgressText');
+    const bar = document.getElementById('shoppingProgressBar');
+    if(text) text.textContent = done + ' av ' + total + ' klara';
+    if(bar) bar.style.width = (total ? (done / total) * 100 : 0) + '%';
+  }
+
+  function renderWeekContent(meals, shopping) {
+    const mealsList = document.getElementById('mealsList');
+    if(mealsList) {
+      mealsList.innerHTML = (meals || []).length ? meals.map((meal, i) => {
+        const date = meal.meal_date ? new Date(meal.meal_date + 'T12:00:00') : null;
+        const weekday = date ? date.toLocaleDateString('sv-SE',{weekday:'long'}) : 'Dag ' + (i+1);
+        const dayName = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        const steps = Array.isArray(meal.recipe) ? meal.recipe : [];
+        return '<div class="day" data-meal-date="' + escapeHtml(meal.meal_date || '') + '">' +
+          '<div class="weekday">' + escapeHtml(dayName) + '</div>' +
+          '<div class="meal">' + escapeHtml(meal.title) + '</div>' +
+          '<div class="ingredients">' + escapeHtml(meal.ingredients || '') + '</div>' +
+          (meal.notes ? '<div class="tip">' + escapeHtml(meal.notes) + '</div>' : '') +
+          '<details class="recipe-details"><summary>Visa recept</summary><ol>' +
+          steps.map(step => '<li>' + escapeHtml(step) + '</li>').join('') +
+          '</ol></details></div>';
+      }).join('') : '<div class="empty-copy">Ingen meny är skapad för veckan ännu.</div>';
+    }
+
+    const shoppingList = document.getElementById('shoppingList');
+    if(shoppingList) {
+      const grouped = {};
+      (shopping || []).forEach(item => {
+        (grouped[item.category || 'Övrigt'] ||= []).push(item);
+      });
+      const groups = Object.entries(grouped).map(([category, items]) =>
+        '<div class="section-title">' + escapeHtml(category) + '</div>' +
+        items.map(item =>
+          '<label class="shop"><input type="checkbox" data-item-id="' + escapeHtml(item.id) + '"' + (item.checked ? ' checked' : '') + '>' +
+          '<span class="name">' + escapeHtml(item.name) + '</span>' +
+          '<span class="qty">' + escapeHtml(item.quantity || '') + '</span></label>'
+        ).join('')
+      ).join('');
+
+      shoppingList.innerHTML =
+        '<div class="shopping-tools"><div class="shopping-tools-top"><strong id="shoppingProgressText">0 av 0 klara</strong>' +
+        '<button type="button" id="toggleCheckedBtn">Dölj klara</button></div>' +
+        '<div class="shopping-mini-track"><div id="shoppingProgressBar"></div></div></div>' +
+        (groups || '<div class="empty-copy">Inköpslistan är tom.</div>');
+
+      document.getElementById('toggleCheckedBtn')?.addEventListener('click', e => {
+        document.getElementById('shoppingCard')?.classList.toggle('hide-checked');
+        e.currentTarget.textContent = document.getElementById('shoppingCard')?.classList.contains('hide-checked') ? 'Visa klara' : 'Dölj klara';
+      });
+      refreshShoppingProgress();
+    }
+
+    const todayIso = new Date().toLocaleDateString('sv-SE');
+    const todayMeal = (meals || []).find(m => m.meal_date === todayIso) || (meals || [])[0];
+    const todayMealEl = document.getElementById('todayMeal');
+    const todayIngEl = document.getElementById('todayIngredients');
+    if(todayMealEl) todayMealEl.textContent = todayMeal?.title || 'Ingen middag planerad idag';
+    if(todayIngEl) todayIngEl.textContent = todayMeal?.ingredients || '';
+
+    const recipeLink = document.getElementById('todayRecipeLink');
+    if(recipeLink) {
+      recipeLink.onclick = e => {
+        e.preventDefault();
+        document.querySelector('#v1 .week-fold')?.setAttribute('open','');
+        const target = todayMeal?.meal_date
+          ? document.querySelector('#mealsList .day[data-meal-date="' + todayMeal.meal_date + '"]')
+          : document.querySelector('#mealsList .day');
+        target?.querySelector('.recipe-details')?.setAttribute('open','');
+        target?.scrollIntoView({behavior:'smooth',block:'center'});
+      };
+    }
+  }
+
 
   function refreshDashboard() {
     const weeklyShop = readNum('cost1');
@@ -420,13 +456,29 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(cost1) cost1.value = weekly ? Number(weekly.amount || 0) : '';
     if(extraInput) extraInput.value = extra ? Number(extra.amount || 0) : '';
 
-    const { data: shopping, error: shoppingError } = await sb
-      .from('shopping_items')
-      .select('id, checked, sort_order')
-      .eq('week_id', activeWeekId)
-      .order('sort_order', { ascending:true });
+    const [mealsResult, shoppingResult] = await Promise.all([
+      sb.from('meals')
+        .select('id, meal_date, title, ingredients, recipe, notes, sort_order')
+        .eq('week_id', activeWeekId)
+        .order('sort_order', { ascending:true }),
+      sb.from('shopping_items')
+        .select('id, category, name, quantity, checked, sort_order')
+        .eq('week_id', activeWeekId)
+        .order('sort_order', { ascending:true })
+    ]);
 
-    if(!shoppingError) applyChecks(shopping || []);
+    if(mealsResult.error) console.error(mealsResult.error);
+    if(shoppingResult.error) console.error(shoppingResult.error);
+
+    renderWeekContent(mealsResult.data || [], shoppingResult.data || []);
+
+    const weekLabel = document.getElementById('activeWeekLabel');
+    const weekTarget = document.getElementById('activeWeekTarget');
+    const activeMonth = document.getElementById('activeMonthBudget');
+    if(weekLabel) weekLabel.textContent = formatWeekLabel(activeWeekStart);
+    if(weekTarget) weekTarget.textContent = fmt(weeklyTarget);
+    if(activeMonth) activeMonth.textContent = fmt(monthBudget);
+
     refreshDashboard();
     document.getElementById('syncText').textContent = 'Synkad';
   }
@@ -526,89 +578,43 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   document.getElementById('cost1')?.addEventListener('input', scheduleSave);
   document.getElementById('extraCost')?.addEventListener('input', scheduleSave);
 
-  document.querySelectorAll('#v1 .shop input[type="checkbox"]').forEach(cb => cb.addEventListener('change', async e => {
+  document.getElementById('shoppingList')?.addEventListener('change', async e => {
+    if(!e.target.matches('.shop input[type="checkbox"]')) return;
     const id = e.target.dataset.itemId;
     if(!id) return;
+    refreshShoppingProgress();
     document.getElementById('syncText').textContent = 'Sparar…';
     const { error } = await sb.from('shopping_items').update({checked:e.target.checked}).eq('id',id);
     document.getElementById('syncText').textContent = error ? 'Kunde inte spara' : 'Synkad';
-  }));
+  });
 
   sb.channel('rolling-meal-plan-live')
     .on('postgres_changes', { event:'*', schema:'public', table:'expenses' }, async payload => {
       const { data: sessionData } = await sb.auth.getSession();
       if(sessionData.session?.user) await loadData(sessionData.session.user.id);
     })
-    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'shopping_items' }, async payload => {
-      if(!activeWeekId || payload.new.week_id !== activeWeekId) return;
-      const cb = document.querySelector('input[data-item-id="' + payload.new.id + '"]');
-      if(cb) cb.checked = !!payload.new.checked;
+    .on('postgres_changes', { event:'*', schema:'public', table:'shopping_items' }, async payload => {
+      if(!activeWeekId) return;
+      const row = payload.new?.id ? payload.new : payload.old;
+      if(row?.week_id && row.week_id !== activeWeekId) return;
+      const { data: sessionData } = await sb.auth.getSession();
+      if(sessionData.session?.user) await loadData(sessionData.session.user.id);
+    })
+    .on('postgres_changes', { event:'*', schema:'public', table:'meals' }, async payload => {
+      if(!activeWeekId) return;
+      const { data: sessionData } = await sb.auth.getSession();
+      if(sessionData.session?.user) await loadData(sessionData.session.user.id);
     })
     .subscribe();
 
 
   function setupAppView() {
-    // Mark each shopping-list card for shopping mode.
-    document.querySelectorAll('.card').forEach(card => {
-      const h2 = card.querySelector('h2');
-      if(h2 && /inköpslista/i.test(h2.textContent)) card.classList.add('shopping-card');
-    });
-
-    const currentShoppingCard = document.querySelector('#v1 .shopping-card');
-    if(currentShoppingCard && !currentShoppingCard.querySelector('.shopping-tools')) {
-      const tools = document.createElement('div');
-      tools.className = 'shopping-tools';
-      tools.innerHTML = '<div class="shopping-tools-top"><strong id="shoppingProgressText">0 av 0 klara</strong><button type="button" id="toggleCheckedBtn">Dölj klara</button></div><div class="shopping-mini-track"><div id="shoppingProgressBar"></div></div>';
-      currentShoppingCard.insertBefore(tools, currentShoppingCard.children[1] || null);
-
-      document.getElementById('toggleCheckedBtn')?.addEventListener('click', (e) => {
-        currentShoppingCard.classList.toggle('hide-checked');
-        e.currentTarget.textContent = currentShoppingCard.classList.contains('hide-checked') ? 'Visa klara' : 'Dölj klara';
-      });
-    }
-
-    function refreshShoppingProgress() {
-      const items = [...document.querySelectorAll('#v1 .shopping-card .shop input[type="checkbox"]')];
-      const done = items.filter(cb => cb.checked).length;
-      const total = items.length;
-      const text = document.getElementById('shoppingProgressText');
-      const bar = document.getElementById('shoppingProgressBar');
-      if(text) text.textContent = done + ' av ' + total + ' klara';
-      if(bar) bar.style.width = (total ? (done / total) * 100 : 0) + '%';
-    }
-    refreshShoppingProgress();
-    document.querySelectorAll('#v1 .shopping-card .shop input[type="checkbox"]').forEach(cb => cb.addEventListener('change', refreshShoppingProgress));
-
-    const originalApplyChecks = applyChecks;
-    applyChecks = function(obj) {
-      originalApplyChecks(obj);
-      refreshShoppingProgress();
-    };
-
-    // Show today's meal from the current week (week 1).
-    const dayNames = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
-    const todayName = dayNames[new Date().getDay()];
-    const todayDay = [...document.querySelectorAll('#v1 .day')].find(el => el.querySelector('.weekday')?.textContent.trim() === todayName);
-    if(todayDay) {
-      const meal = todayDay.querySelector('.meal')?.textContent || '';
-      const ingredients = todayDay.querySelector('.ingredients')?.textContent || '';
-      const mealEl = document.getElementById('todayMeal');
-      const ingEl = document.getElementById('todayIngredients');
-      if(mealEl) mealEl.textContent = meal;
-      if(ingEl) ingEl.textContent = ingredients;
-      document.getElementById('todayRecipeLink')?.addEventListener('click', () => {
-        const details = todayDay.querySelector('.recipe-details');
-        if(details) details.open = true;
-        document.querySelector('#v1 .week-fold')?.setAttribute('open','');
-      });
-    }
-
     const btn = document.getElementById('shoppingModeBtn');
     if(btn) btn.addEventListener('click', () => {
       document.body.classList.toggle('shopping-mode');
       btn.textContent = document.body.classList.contains('shopping-mode') ? 'Klar' : 'Handla';
       if(document.body.classList.contains('shopping-mode')) {
-        document.querySelector('#v1 .shopping-card')?.scrollIntoView({behavior:'smooth', block:'start'});
+        document.getElementById('shoppingCard')?.scrollIntoView({behavior:'smooth', block:'start'});
       }
     });
   }
