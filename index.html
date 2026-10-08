@@ -176,6 +176,9 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .rule-fixed{background:#eef3ee;color:#47604b;border-radius:999px;padding:5px 8px;font-size:10.5px;font-weight:850}
 .rule-delete{border:0;background:#f3f4f3;color:#596267;width:30px;height:30px;border-radius:10px;font-weight:800;cursor:pointer}
 @media(max-width:620px){.favorite-picker{grid-template-columns:1fr}.rule-form{grid-template-columns:1fr}.rule-form button{padding:10px}}
+
+.next-move-select{border:1px solid #dce2dd;background:#fff;color:#334047;border-radius:9px;padding:6px 7px;font-size:12px;font-weight:750;max-width:118px}
+@media(max-width:620px){.next-meal-row{align-items:flex-start}.next-meal-actions{flex-wrap:wrap;justify-content:flex-end}.next-move-select{max-width:108px}}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -645,6 +648,29 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     }
   }
 
+  function isTacoRelated(title) {
+    return /taco|fajita|burrito|quesadilla|nacho/i.test(String(title||''));
+  }
+
+  function isFridayIso(dateString) {
+    if(!dateString) return false;
+    return new Date(dateString+'T12:00:00').getDay()===5;
+  }
+
+  function plannedDayOptions(currentDate) {
+    if(!plannedWeekStart) return '';
+    const start=new Date(plannedWeekStart+'T12:00:00');
+    const options=[];
+    for(let i=0;i<7;i++) {
+      const d=new Date(start);
+      d.setDate(start.getDate()+i);
+      const iso=d.toISOString().slice(0,10);
+      const name=d.toLocaleDateString('sv-SE',{weekday:'short'});
+      options.push('<option value="'+iso+'"'+(iso===currentDate?' selected':'')+'>'+escapeHtml(name)+'</option>');
+    }
+    return options.join('');
+  }
+
   function renderNextWeek(week, meals) {
     plannedMealsCache=meals || [];
     const title = document.getElementById('nextWeekTitle');
@@ -688,6 +714,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
         return '<div class="next-meal-row"><div class="next-meal-main"><span>'+escapeHtml(weekday)+'</span><span>'+
           escapeHtml(meal.title)+(meal.carried_over?' · flyttad':'')+
           '</span></div><div class="next-meal-actions">'+
+          '<select class="next-move-select" data-meal-id="'+escapeHtml(meal.id)+'" aria-label="Flytta middag">'+plannedDayOptions(meal.meal_date)+'</select>'+
           '<button type="button" class="next-edit-btn" data-meal-id="'+escapeHtml(meal.id)+'">Byt</button>'+
           '<button type="button" class="next-remove-btn" data-meal-id="'+escapeHtml(meal.id)+'">Ta bort</button>'+
           '</div></div>';
@@ -1084,6 +1111,53 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   }
 
 
+  async function movePlannedMeal(mealId, targetDate) {
+    const meal=plannedMealsCache.find(m=>m.id===mealId);
+    if(!meal || !targetDate || targetDate===meal.meal_date) return;
+
+    const targetMeal=plannedMealsCache.find(m=>m.meal_date===targetDate && m.id!==mealId);
+    const sourceWasFriday=isFridayIso(meal.meal_date);
+    const targetIsFriday=isFridayIso(targetDate);
+
+    let fridayTitle=null;
+    if(targetIsFriday) fridayTitle=meal.title;
+    else if(sourceWasFriday) fridayTitle=targetMeal?.title || null;
+    else {
+      const fridayMeal=plannedMealsCache.find(m=>isFridayIso(m.meal_date));
+      fridayTitle=fridayMeal?.title || null;
+    }
+
+    if((sourceWasFriday || targetIsFriday) && !isTacoRelated(fridayTitle)) {
+      window.alert('Fredag ska vara taco-relaterad. Flytten skulle bryta mot den regeln.');
+      renderNextWeek({week_start:plannedWeekStart,offers:[]}, plannedMealsCache);
+      return;
+    }
+
+    document.getElementById('syncText').textContent='Sparar…';
+
+    if(targetMeal) {
+      const oldDate=meal.meal_date;
+      const {error:firstError}=await sb.from('meals').update({meal_date:null}).eq('id',meal.id);
+      if(firstError) { console.error(firstError); return; }
+
+      const {error:secondError}=await sb.from('meals').update({meal_date:oldDate}).eq('id',targetMeal.id);
+      if(secondError) {
+        console.error(secondError);
+        await sb.from('meals').update({meal_date:oldDate}).eq('id',meal.id);
+        return;
+      }
+
+      const {error:thirdError}=await sb.from('meals').update({meal_date:targetDate}).eq('id',meal.id);
+      if(thirdError) console.error(thirdError);
+    } else {
+      const {error}=await sb.from('meals').update({meal_date:targetDate}).eq('id',meal.id);
+      if(error) console.error(error);
+    }
+
+    const {data:sessionData}=await sb.auth.getSession();
+    if(sessionData.session?.user) await loadData(sessionData.session.user.id);
+  }
+
   async function editPlannedMeal(mealId) {
     const meal=plannedMealsCache.find(m=>m.id===mealId);
     if(!meal) return;
@@ -1242,6 +1316,11 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(edit) { editPlannedMeal(edit.dataset.mealId); return; }
     const remove=e.target.closest('.next-remove-btn');
     if(remove) removePlannedMeal(remove.dataset.mealId);
+  });
+
+  document.getElementById('nextWeekMeals')?.addEventListener('change', e => {
+    const select=e.target.closest('.next-move-select');
+    if(select) movePlannedMeal(select.dataset.mealId, select.value);
   });
 
   document.getElementById('useFavoriteBtn')?.addEventListener('click', useFavoriteOnDay);
