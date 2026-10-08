@@ -156,6 +156,8 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .skipped-badge,.carried-badge{display:inline-block;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:850;margin-top:7px}
 .skipped-badge{background:#f1f1f1;color:#666}
 .carried-badge{background:#fff2c7;color:#725900}
+
+.undo-move-btn{border:1px solid #e3d7c7;background:#fff8ef;color:#6b4d2f;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:850;cursor:pointer}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#history">Historik</a>
@@ -457,7 +459,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
           '<button type="button" class="meal-fav-btn'+(fav?' saved':'')+'" data-meal-id="'+escapeHtml(meal.id)+'" aria-label="Favorit">'+(fav?'★':'☆')+'</button></div>'+
           '<div class="ingredients">'+escapeHtml(meal.ingredients||'')+'</div>'+
           (meal.carried_over?'<span class="carried-badge">Flyttad från tidigare vecka</span>':'')+
-          (skipped?'<span class="skipped-badge">Åt borta · flyttad vidare</span>':'')+
+          (skipped?'<span class="skipped-badge">Åt borta · flyttad vidare</span><div class="meal-actions"><button type="button" class="undo-move-btn" data-meal-id="'+escapeHtml(meal.id)+'">Ångra flytt</button></div>':'')+
           (meal.notes?'<div class="tip">'+escapeHtml(meal.notes)+'</div>':'')+
           (!skipped?'<div class="meal-actions"><button type="button" class="move-meal-btn" data-meal-id="'+escapeHtml(meal.id)+'">Äter borta → flytta till nästa vecka</button></div>'+
           '<details class="recipe-details"><summary>Visa recept</summary><ol>'+
@@ -934,6 +936,46 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(sessionData.session?.user) await loadData(sessionData.session.user.id);
   }
 
+  async function undoMoveMeal(mealId) {
+    const meal=currentMeals.find(m=>m.id===mealId);
+    if(!meal || meal.status!=='skipped') return;
+
+    document.getElementById('syncText').textContent='Sparar…';
+
+    const {data:carried,error:carriedError}=await sb.from('meals')
+      .select('id')
+      .eq('source_meal_id',meal.id);
+
+    if(carriedError) {
+      console.error(carriedError);
+      document.getElementById('syncText').textContent='Kunde inte spara';
+      return;
+    }
+
+    if((carried||[]).length) {
+      const ids=carried.map(x=>x.id);
+      const {error:deleteError}=await sb.from('meals').delete().in('id',ids);
+      if(deleteError) {
+        console.error(deleteError);
+        document.getElementById('syncText').textContent='Kunde inte spara';
+        return;
+      }
+    }
+
+    const {error:updateError}=await sb.from('meals')
+      .update({status:'planned'})
+      .eq('id',meal.id);
+
+    if(updateError) {
+      console.error(updateError);
+      document.getElementById('syncText').textContent='Kunde inte spara';
+      return;
+    }
+
+    const {data:sessionData}=await sb.auth.getSession();
+    if(sessionData.session?.user) await loadData(sessionData.session.user.id);
+  }
+
   async function toggleFavorite(mealId) {
     const meal=currentMeals.find(m=>m.id===mealId);
     if(!meal) return;
@@ -1013,7 +1055,12 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       return;
     }
     const moveBtn=e.target.closest('.move-meal-btn');
-    if(moveBtn) moveMealToNextWeek(moveBtn.dataset.mealId);
+    if(moveBtn) {
+      moveMealToNextWeek(moveBtn.dataset.mealId);
+      return;
+    }
+    const undoBtn=e.target.closest('.undo-move-btn');
+    if(undoBtn) undoMoveMeal(undoBtn.dataset.mealId);
   });
 
   document.getElementById('favoritesList')?.addEventListener('click', async e => {
