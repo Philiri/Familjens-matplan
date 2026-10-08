@@ -86,6 +86,14 @@ body.shopping-mode main:before{content:"Inköpsläge";display:block;font-size:24
 body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .shopping-mode-exit{display:none}
 @media(max-width:520px){.today-card{align-items:flex-start;flex-direction:column}.today-link{align-self:flex-start}.today-card h2{font-size:21px}}
+
+.week-budget-status{margin-top:8px;padding-top:8px;border-top:1px solid #eef1ee;font-size:12.5px;font-weight:750;color:#47604b}
+.shopping-tools{position:sticky;top:82px;z-index:4;background:#fff;border:1px solid #e7ebe7;border-radius:14px;padding:10px 11px;margin:-2px 0 10px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.shopping-tools-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.shopping-tools strong{font-size:15px}.shopping-tools button{border:0;background:#eef3ee;color:#243038;border-radius:999px;padding:7px 10px;font-weight:750}
+.shopping-mini-track{height:7px;background:#e9eeea;border-radius:999px;overflow:hidden;margin-top:9px}.shopping-mini-track>div{height:100%;width:0;background:#6f8f72;border-radius:999px;transition:width .2s ease}
+.shop:has(input:checked) .name,.shop:has(input:checked) .qty{text-decoration:line-through;opacity:.48}
+.shopping-card.hide-checked .shop:has(input:checked){display:none}
+.shopping-card .section-title{scroll-margin-top:145px}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#v1">Veckor</a>
@@ -124,7 +132,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   <div class="month-progress">
     <div class="progress-top"><span>Matbudget denna månad</span><strong id="progressAmount">0 / 7 000 kr</strong></div>
     <div class="progress-track"><div id="budgetProgressBar"></div></div>
-    <div class="progress-foot" id="progressFoot">7 000 kr kvar</div>
+    <div class="progress-foot" id="progressFoot">7 000 kr kvar</div><div class="week-budget-status" id="weekBudgetStatus"></div>
   </div>
 </section>
 
@@ -142,19 +150,19 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     <div class="section-title">Fyll i faktisk kostnad</div>
 
     <div class="cost-row">
-      <label>Vecka 1<small>Faktisk kostnad</small></label>
+      <label>Vecka 1<small>Veckohandling</small></label>
       <input inputmode="decimal" type="number" min="0" step="1" id="cost1" placeholder="0 kr">
     </div>
     <div class="cost-row">
-      <label>Vecka 2<small>Faktisk kostnad</small></label>
+      <label>Vecka 2<small>Veckohandling</small></label>
       <input inputmode="decimal" type="number" min="0" step="1" id="cost2" placeholder="0 kr">
     </div>
     <div class="cost-row">
-      <label>Vecka 3<small>Faktisk kostnad</small></label>
+      <label>Vecka 3<small>Veckohandling</small></label>
       <input inputmode="decimal" type="number" min="0" step="1" id="cost3" placeholder="0 kr">
     </div>
     <div class="cost-row">
-      <label>Vecka 4<small>Faktisk kostnad</small></label>
+      <label>Vecka 4<small>Veckohandling</small></label>
       <input inputmode="decimal" type="number" min="0" step="1" id="cost4" placeholder="0 kr">
     </div>
     <div class="cost-row">
@@ -325,6 +333,19 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(progressAmount) progressAmount.textContent = fmt(spent).replace(' kr','') + ' / 7 000 kr';
     if(progressFoot) progressFoot.textContent = fmt(remain) + ' kvar';
 
+    const weekBudgetStatus = document.getElementById('weekBudgetStatus');
+    if(weekBudgetStatus) {
+      const actualWeek1 = week1 + extra;
+      const diff = 1200 - actualWeek1;
+      if(actualWeek1 === 0) {
+        weekBudgetStatus.textContent = 'Vecka 1: ännu ingen kostnad registrerad.';
+      } else if(diff >= 0) {
+        weekBudgetStatus.textContent = 'Vecka 1: ' + fmt(actualWeek1) + ' — ' + fmt(diff) + ' under riktmärket 1 200 kr.';
+      } else {
+        weekBudgetStatus.textContent = 'Vecka 1: ' + fmt(actualWeek1) + ' — ' + fmt(Math.abs(diff)) + ' över riktmärket 1 200 kr.';
+      }
+    }
+
     const s1 = document.getElementById('weekCostSummary1');
     const s2 = document.getElementById('weekCostSummary2');
     const s3 = document.getElementById('weekCostSummary3');
@@ -452,6 +473,37 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       if(h2 && /inköpslista/i.test(h2.textContent)) card.classList.add('shopping-card');
     });
 
+    const currentShoppingCard = document.querySelector('#v1 .shopping-card');
+    if(currentShoppingCard && !currentShoppingCard.querySelector('.shopping-tools')) {
+      const tools = document.createElement('div');
+      tools.className = 'shopping-tools';
+      tools.innerHTML = '<div class="shopping-tools-top"><strong id="shoppingProgressText">0 av 0 klara</strong><button type="button" id="toggleCheckedBtn">Dölj klara</button></div><div class="shopping-mini-track"><div id="shoppingProgressBar"></div></div>';
+      currentShoppingCard.insertBefore(tools, currentShoppingCard.children[1] || null);
+
+      document.getElementById('toggleCheckedBtn')?.addEventListener('click', (e) => {
+        currentShoppingCard.classList.toggle('hide-checked');
+        e.currentTarget.textContent = currentShoppingCard.classList.contains('hide-checked') ? 'Visa klara' : 'Dölj klara';
+      });
+    }
+
+    function refreshShoppingProgress() {
+      const items = [...document.querySelectorAll('#v1 .shopping-card .shop input[type="checkbox"]')];
+      const done = items.filter(cb => cb.checked).length;
+      const total = items.length;
+      const text = document.getElementById('shoppingProgressText');
+      const bar = document.getElementById('shoppingProgressBar');
+      if(text) text.textContent = done + ' av ' + total + ' klara';
+      if(bar) bar.style.width = (total ? (done / total) * 100 : 0) + '%';
+    }
+    refreshShoppingProgress();
+    document.querySelectorAll('#v1 .shopping-card .shop input[type="checkbox"]').forEach(cb => cb.addEventListener('change', refreshShoppingProgress));
+
+    const originalApplyChecks = applyChecks;
+    applyChecks = function(obj) {
+      originalApplyChecks(obj);
+      refreshShoppingProgress();
+    };
+
     // Show today's meal from the current week (week 1).
     const dayNames = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
     const todayName = dayNames[new Date().getDay()];
@@ -475,7 +527,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       document.body.classList.toggle('shopping-mode');
       btn.textContent = document.body.classList.contains('shopping-mode') ? 'Klar' : 'Handla';
       if(document.body.classList.contains('shopping-mode')) {
-        window.scrollTo({top:0,behavior:'smooth'});
+        document.querySelector('#v1 .shopping-card')?.scrollIntoView({behavior:'smooth', block:'start'});
       }
     });
   }
