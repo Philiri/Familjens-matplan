@@ -192,6 +192,13 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .shopping-card-head h2{margin:0}
 #toggleShoppingCardBtn{border:0;background:#eef1ef;color:#40504a;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;cursor:pointer}
 .shopping-card.collapsed #shoppingList{display:none}
+
+.shopping-add-form{display:grid;grid-template-columns:1fr 90px auto;gap:7px;margin:12px 0 10px}
+.shopping-add-form input{min-width:0;border:1px solid #dce2dd;border-radius:10px;padding:9px 10px;font:inherit}
+.shopping-add-form button{border:0;border-radius:10px;background:#203040;color:#fff;padding:9px 11px;font-weight:800;cursor:pointer}
+.shopping-card.collapsed .shopping-add-form{display:none}
+.manual-delete{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#f3f4f3;color:#596267;font-weight:900;cursor:pointer;margin-left:4px}
+@media(max-width:520px){.shopping-add-form{grid-template-columns:1fr 75px}.shopping-add-form button{grid-column:1/-1}}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -291,6 +298,11 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
         <div class="shopping-card-head">
           <h2>Veckans inköpslista</h2>
           <button type="button" id="toggleShoppingCardBtn">Dölj inköpslista</button>
+        </div>
+        <div class="shopping-add-form">
+          <input id="manualItemName" type="text" placeholder="Lägg till egen vara">
+          <input id="manualItemQty" type="text" placeholder="Antal">
+          <button type="button" id="addManualItemBtn">Lägg till</button>
         </div>
         <div id="shoppingList"><div class="loading-copy">Laddar inköpslistan…</div></div>
       </div>
@@ -552,7 +564,9 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       const groups=Object.entries(grouped).map(([category,items])=>
         '<div class="section-title">'+escapeHtml(category)+'</div>'+
         items.map(item=>'<label class="shop"><input type="checkbox" data-item-id="'+escapeHtml(item.id)+'"'+(item.checked?' checked':'')+'>'+
-          '<span class="name">'+escapeHtml(item.name)+'</span><span class="qty">'+escapeHtml(item.quantity||'')+'</span></label>').join('')
+          '<span class="name">'+escapeHtml(item.name)+'</span><span class="qty">'+escapeHtml(item.quantity||'')+'</span>'+
+          (item.is_manual?'<span class="manual-delete" data-item-id="'+escapeHtml(item.id)+'" title="Ta bort">×</span>':'')+
+          '</label>').join('')
       ).join('');
       shoppingList.innerHTML='<div class="shopping-tools"><div class="shopping-tools-top"><strong id="shoppingProgressText">0 av 0 klara</strong>'+
         '<button type="button" id="toggleCheckedBtn">Dölj klara</button></div><div class="shopping-mini-track"><div id="shoppingProgressBar"></div></div></div>'+
@@ -919,11 +933,11 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
     const [mealsResult, shoppingResult, favoritesResult] = await Promise.all([
       sb.from('meals')
-        .select('id, meal_date, title, ingredients, recipe, notes, sort_order, status, carried_over, source_meal_id')
+        .select('id, week_id, meal_date, title, ingredients, recipe, notes, sort_order, status, carried_over, source_meal_id')
         .eq('week_id', activeWeekId)
         .order('sort_order', { ascending:true }),
       sb.from('shopping_items')
-        .select('id, category, name, quantity, checked, sort_order')
+        .select('id, category, name, quantity, checked, sort_order, source_meal_id, is_manual')
         .eq('week_id', activeWeekId)
         .order('sort_order', { ascending:true }),
       sb.from('favorite_meals')
@@ -1008,6 +1022,66 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     }
     document.getElementById('extraDescription').value='';
     document.getElementById('extraAmount').value='';
+    const {data:sessionData}=await sb.auth.getSession();
+    if(sessionData.session?.user) await loadData(sessionData.session.user.id);
+  }
+
+  function ingredientRows(ingredients, mealId, weekId) {
+    return String(ingredients||'')
+      .split(/[,;\n]+/)
+      .map(s=>s.trim())
+      .filter(Boolean)
+      .map((text,index)=>({
+        week_id:weekId,
+        category:'Till middagar',
+        name:text,
+        quantity:'',
+        checked:false,
+        sort_order:500+index,
+        source_meal_id:mealId,
+        is_manual:false
+      }));
+  }
+
+  async function syncShoppingForMeal(meal) {
+    if(!meal?.id || !meal?.week_id) return;
+    const {error:deleteError}=await sb.from('shopping_items')
+      .delete()
+      .eq('source_meal_id',meal.id)
+      .eq('is_manual',false);
+    if(deleteError) {
+      console.error(deleteError);
+      return;
+    }
+    const rows=ingredientRows(meal.ingredients,meal.id,meal.week_id);
+    if(rows.length) {
+      const {error:insertError}=await sb.from('shopping_items').insert(rows);
+      if(insertError) console.error(insertError);
+    }
+  }
+
+  async function addManualShoppingItem() {
+    const name=(document.getElementById('manualItemName')?.value||'').trim();
+    const quantity=(document.getElementById('manualItemQty')?.value||'').trim();
+    if(!name || !activeWeekId) return;
+    document.getElementById('syncText').textContent='Sparar…';
+    const {error}=await sb.from('shopping_items').insert({
+      week_id:activeWeekId,
+      category:'Eget',
+      name,
+      quantity,
+      checked:false,
+      sort_order:900,
+      is_manual:true,
+      source_meal_id:null
+    });
+    if(error) {
+      console.error(error);
+      document.getElementById('syncText').textContent='Kunde inte spara';
+      return;
+    }
+    document.getElementById('manualItemName').value='';
+    document.getElementById('manualItemQty').value='';
     const {data:sessionData}=await sb.auth.getSession();
     if(sessionData.session?.user) await loadData(sessionData.session.user.id);
   }
@@ -1254,12 +1328,14 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       status:'planned'
     };
 
-    const {error}=await sb.from('meals').update(payload).eq('id',mealId);
+    const {data:updatedMeal,error}=await sb.from('meals').update(payload).eq('id',mealId)
+      .select('id,week_id,ingredients').single();
     if(error) {
       console.error(error);
       if(status) status.textContent='Kunde inte spara.';
       return;
     }
+    await syncShoppingForMeal(updatedMeal);
     closeMealEditor();
     const {data:sessionData}=await sb.auth.getSession();
     if(sessionData.session?.user) await loadData(sessionData.session.user.id);
@@ -1279,24 +1355,33 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(!favId || !date || !plannedWeekId) return;
     const fav=currentFavorites.find(f=>f.id===favId);
     if(!fav) return;
+    if(isFridayIso(date) && !isTacoRelated(fav.title)) {
+      window.alert('Fredag ska vara taco-relaterad.');
+      return;
+    }
 
     const existing=plannedMealsCache.find(m=>m.meal_date===date);
+    let savedMeal=null;
     if(existing) {
-      const {error}=await sb.from('meals').update({
+      const {data,error}=await sb.from('meals').update({
         title:fav.title,ingredients:fav.ingredients,recipe:fav.recipe||[],notes:fav.notes||null,
         carried_over:false,source_meal_id:null,status:'planned'
-      }).eq('id',existing.id);
-      if(error) console.error(error);
+      }).eq('id',existing.id).select('id,week_id,ingredients').single();
+      if(error) { console.error(error); return; }
+      savedMeal=data;
     } else {
-      const {error}=await sb.from('meals').insert({
+      const {data,error}=await sb.from('meals').insert({
         week_id:plannedWeekId,meal_date:date,title:fav.title,ingredients:fav.ingredients,
         recipe:fav.recipe||[],notes:fav.notes||null,sort_order:plannedMealsCache.length,status:'planned'
-      });
-      if(error) console.error(error);
+      }).select('id,week_id,ingredients').single();
+      if(error) { console.error(error); return; }
+      savedMeal=data;
     }
+    await syncShoppingForMeal(savedMeal);
     const {data:sessionData}=await sb.auth.getSession();
     if(sessionData.session?.user) await loadData(sessionData.session.user.id);
   }
+
 
   async function addMealRule() {
     const input=document.getElementById('newRuleText');
@@ -1427,6 +1512,21 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   document.getElementById('mealRulesList')?.addEventListener('click', e => {
     const btn=e.target.closest('.rule-delete');
     if(btn) deleteMealRule(Number(btn.dataset.ruleIndex));
+  });
+
+  document.getElementById('addManualItemBtn')?.addEventListener('click', addManualShoppingItem);
+  document.getElementById('manualItemName')?.addEventListener('keydown', e => { if(e.key==='Enter') addManualShoppingItem(); });
+  document.getElementById('manualItemQty')?.addEventListener('keydown', e => { if(e.key==='Enter') addManualShoppingItem(); });
+
+  document.getElementById('shoppingList')?.addEventListener('click', async e => {
+    const del=e.target.closest('.manual-delete');
+    if(!del) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const {error}=await sb.from('shopping_items').delete().eq('id',del.dataset.itemId).eq('is_manual',true);
+    if(error) console.error(error);
+    const {data:sessionData}=await sb.auth.getSession();
+    if(sessionData.session?.user) await loadData(sessionData.session.user.id);
   });
 
   document.getElementById('shoppingList')?.addEventListener('change', async e => {
