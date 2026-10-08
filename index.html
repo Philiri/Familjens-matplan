@@ -113,9 +113,26 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .next-meal-row{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;background:#f7f8f7;border-radius:10px;font-size:13px}
 .next-meal-row span:first-child{font-weight:800;color:#203040}
 .next-meal-row span:last-child{text-align:right;color:#556066}
+
+.history-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
+.history-head h2{margin:2px 0 0}
+.history-week{border:1px solid #e8ece9;border-radius:14px;margin:9px 0;overflow:hidden;background:#fff}
+.history-week>summary{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 13px;cursor:pointer;list-style:none}
+.history-week>summary::-webkit-details-marker{display:none}
+.history-week-title{display:grid;gap:2px}
+.history-week-title strong{font-size:14px}
+.history-week-title span{font-size:12px;color:#6d7578}
+.history-week-cost{font-weight:850;white-space:nowrap}
+.history-body{padding:0 13px 13px}
+.history-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.history-stat{background:#f7f8f7;border-radius:10px;padding:9px 10px}
+.history-stat span{display:block;font-size:11px;color:#6c7376}
+.history-stat b{font-size:14px}
+.history-meals{display:grid;gap:5px}
+.history-meal{font-size:12.5px;padding:7px 8px;background:#f7f8f7;border-radius:9px}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
-<a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a>
+<a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#history">Historik</a>
 </div></header><main>
 <section class="auth-panel" id="authPanel">
   <h2>Familjens synkning</h2>
@@ -221,6 +238,20 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     <p id="nextWeekText">Nästa vecka hämtas från Supabase.</p>
     <div id="nextWeekMeals" class="next-meals"></div>
     <div class="next-note" id="nextWeekNote">Du får en påminnelse på söndagar att planera nästa vecka.</div>
+  </div>
+</section>
+
+
+<section class="week locked" id="history">
+  <div class="budget-card">
+    <div class="history-head">
+      <div>
+        <div class="home-eyebrow">HISTORIK</div>
+        <h2>Tidigare veckor</h2>
+      </div>
+      <span class="offer-badge" id="historyCount">0 veckor</span>
+    </div>
+    <div id="historyList"><div class="loading-copy">Laddar historik…</div></div>
   </div>
 </section>
 
@@ -482,6 +513,54 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       : 'Du får en påminnelse på söndagar att planera nästa vecka.';
   }
 
+
+  async function renderHistory(weeks, expenses) {
+    const archived = (weeks || [])
+      .filter(w => w.status === 'archived')
+      .sort((a,b)=>b.week_start.localeCompare(a.week_start));
+
+    const count = document.getElementById('historyCount');
+    const list = document.getElementById('historyList');
+    if(count) count.textContent = archived.length + (archived.length === 1 ? ' vecka' : ' veckor');
+    if(!list) return;
+
+    if(!archived.length) {
+      list.innerHTML = '<div class="empty-copy">Ingen tidigare vecka ännu. Den första hamnar här när nästa vecka blir aktiv.</div>';
+      return;
+    }
+
+    const mealResults = await Promise.all(archived.map(w =>
+      sb.from('meals')
+        .select('meal_date,title,sort_order')
+        .eq('week_id', w.id)
+        .order('sort_order',{ascending:true})
+    ));
+
+    list.innerHTML = archived.map((week, idx) => {
+      const weekExpenses = (expenses || []).filter(e => e.week_id === week.id);
+      const spent = weekExpenses.reduce((sum,e)=>sum+Number(e.amount||0),0);
+      const meals = mealResults[idx]?.data || [];
+      const diff = Number(week.planned_budget || weeklyTarget) - spent;
+      const diffText = diff >= 0
+        ? fmt(diff) + ' under riktmärket'
+        : fmt(Math.abs(diff)) + ' över riktmärket';
+
+      return '<details class="history-week">' +
+        '<summary><div class="history-week-title"><strong>' + escapeHtml(formatWeekLabel(week.week_start)) + '</strong>' +
+        '<span>' + meals.length + ' middagar</span></div><div class="history-week-cost">' + escapeHtml(fmt(spent)) + '</div></summary>' +
+        '<div class="history-body"><div class="history-stats">' +
+        '<div class="history-stat"><span>Spenderat</span><b>' + escapeHtml(fmt(spent)) + '</b></div>' +
+        '<div class="history-stat"><span>Mot riktmärke</span><b>' + escapeHtml(diffText) + '</b></div>' +
+        '</div><div class="history-meals">' +
+        meals.map(m => {
+          const d = m.meal_date ? new Date(m.meal_date + 'T12:00:00') : null;
+          const day = d ? d.toLocaleDateString('sv-SE',{weekday:'short'}) : '';
+          return '<div class="history-meal"><b>' + escapeHtml(day) + ':</b> ' + escapeHtml(m.title) + '</div>';
+        }).join('') +
+        '</div></div></details>';
+    }).join('');
+  }
+
   async function loadData(userId) {
     document.getElementById('syncText').textContent = 'Synkar…';
 
@@ -619,6 +698,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       plannedMeals = nextMealsResult.data || [];
     }
     renderNextWeek(plannedWeek, plannedMeals);
+    await renderHistory(refreshedWeeks || weeks || [], expenses || []);
 
     refreshDashboard();
     document.getElementById('syncText').textContent = 'Synkad';
