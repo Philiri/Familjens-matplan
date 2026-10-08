@@ -1,4 +1,4 @@
-<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><title>Familjens matplan</title><style>
+<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="theme-color" content="#203040"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Matplan"><title>Familjens matplan</title><style>
 :root{--navy:#203040;--green:#6f8f72;--gold:#d9b56d;--text:#243038;--muted:#6f777b;--line:#e7ebe7}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f6f4;color:var(--text)}
 header{background:var(--navy);color:white;padding:18px 12px 12px;position:sticky;top:0;z-index:5}
@@ -63,9 +63,32 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 
 .week-cost label{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .week-cost strong{font-size:18px;color:#243038;white-space:nowrap}
+
+.nav button{border:0;color:white;background:#ffffff22;border-radius:999px;padding:8px 12px;font-weight:700;white-space:nowrap;font:inherit;cursor:pointer}
+.home-panel{scroll-margin-top:95px;margin-bottom:12px}
+.home-eyebrow{font-size:11px;font-weight:850;letter-spacing:.08em;color:#6f8f72;margin:2px 2px 7px}
+.today-card{background:#203040;color:#fff;border-radius:20px;padding:17px;display:flex;justify-content:space-between;gap:14px;align-items:flex-end;box-shadow:0 5px 18px rgba(32,48,64,.16)}
+.today-label{font-size:12px;opacity:.75;font-weight:700}.today-card h2{font-size:22px;line-height:1.15;margin:5px 0 6px}.today-card p{font-size:13px;line-height:1.35;margin:0;opacity:.82;max-width:520px}
+.today-link{color:#203040;background:#fff;text-decoration:none;border-radius:999px;padding:9px 11px;font-size:12px;font-weight:800;white-space:nowrap}
+.month-progress{background:#fff;border-radius:16px;padding:13px 14px;margin-top:9px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.progress-top{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:800}.progress-top strong{white-space:nowrap}
+.progress-track{height:10px;background:#e9eeea;border-radius:999px;overflow:hidden;margin:10px 0 6px}.progress-track>div{height:100%;width:0;background:#6f8f72;border-radius:999px;transition:width .25s ease}
+.progress-foot{font-size:12px;color:#6f777b}
+.week-state{font-size:11px;font-weight:800;background:#ffffff20;padding:5px 8px;border-radius:999px}.week-state.current{background:#fff;color:#203040}
+.auth-panel #loggedIn{display:flex;align-items:center;justify-content:space-between;gap:10px}.auth-panel #loggedIn>div:nth-child(2){display:none}.auth-panel #loggedIn .auth-actions{margin:0}.auth-panel #loggedIn .auth-actions button{padding:7px 10px;font-size:12px}
+body.shopping-mode #budget,body.shopping-mode .home-panel,body.shopping-mode .card:not(.shopping-card),body.shopping-mode .hero,body.shopping-mode .week-cost,body.shopping-mode #v2,body.shopping-mode #v3,body.shopping-mode #v4{display:none!important}
+body.shopping-mode #v1{display:block!important}
+body.shopping-mode #v1 .week-fold{display:block!important}
+body.shopping-mode #v1 .week-fold>summary{display:none!important}
+body.shopping-mode #v1 .week-inner{display:block!important}
+body.shopping-mode #v1 .shopping-card{display:block!important}
+body.shopping-mode main:before{content:"Inköpsläge";display:block;font-size:24px;font-weight:850;margin:6px 2px 12px;color:#203040}
+body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
+.shopping-mode-exit{display:none}
+@media(max-width:520px){.today-card{align-items:flex-start;flex-direction:column}.today-link{align-self:flex-start}.today-card h2{font-size:21px}}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
-<a href="#v1">Vecka 1</a><a href="#v2">Vecka 2</a><a href="#v3">Vecka 3</a><a href="#v4">Vecka 4</a>
+<a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#v1">Veckor</a>
 </div></header><main>
 <section class="auth-panel" id="authPanel">
   <h2>Familjens synkning</h2>
@@ -85,6 +108,23 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
     <div class="auth-actions">
       <button type="button" class="secondary" id="logoutBtn">Logga ut</button>
     </div>
+  </div>
+</section>
+
+<section class="home-panel locked" id="todayCard">
+  <div class="home-eyebrow">AKTUELL VECKA</div>
+  <div class="today-card">
+    <div>
+      <span class="today-label">Idag äter vi</span>
+      <h2 id="todayMeal">Laddar dagens middag…</h2>
+      <p id="todayIngredients"></p>
+    </div>
+    <a class="today-link" id="todayRecipeLink" href="#v1">Visa recept</a>
+  </div>
+  <div class="month-progress">
+    <div class="progress-top"><span>Matbudget denna månad</span><strong id="progressAmount">0 / 7 000 kr</strong></div>
+    <div class="progress-track"><div id="budgetProgressBar"></div></div>
+    <div class="progress-foot" id="progressFoot">7 000 kr kvar</div>
   </div>
 </section>
 
@@ -128,7 +168,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 </section>
 <section class="week locked" id="v1">
     <details class="week-fold" open>
-      <summary>Vecka 1</summary>
+      <summary><span>Vecka 1</span><small class="week-state current">Aktuell</small></summary>
       <div class="week-inner">
         
     
@@ -147,7 +187,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
     </details>
   </section><section class="week locked" id="v2">
     <details class="week-fold">
-      <summary>Vecka 2</summary>
+      <summary><span>Vecka 2</span><small class="week-state">Kommande</small></summary>
       <div class="week-inner">
         
     
@@ -166,7 +206,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
     </details>
   </section><section class="week locked" id="v3">
     <details class="week-fold">
-      <summary>Vecka 3</summary>
+      <summary><span>Vecka 3</span><small class="week-state">Senare</small></summary>
       <div class="week-inner">
         
     
@@ -185,7 +225,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
     </details>
   </section><section class="week locked" id="v4">
     <details class="week-fold">
-      <summary>Vecka 4</summary>
+      <summary><span>Vecka 4</span><small class="week-state">Senare</small></summary>
       <div class="week-inner">
         
     
@@ -223,7 +263,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
   const fmt = n => Math.round(Number(n || 0)).toLocaleString('sv-SE') + ' kr';
 
   function setLocked(locked) {
-    document.querySelectorAll('section.week').forEach(el => el.classList.toggle('locked', locked));
+    document.querySelectorAll('section.week, .home-panel').forEach(el => el.classList.toggle('locked', locked));
   }
 
   function checkboxKey(cb, index) {
@@ -277,6 +317,13 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
     if(a) a.textContent = fmt(spent);
     if(b) b.textContent = fmt(remain);
     if(c) c.textContent = fmt(remain);
+
+    const progress = document.getElementById('budgetProgressBar');
+    const progressAmount = document.getElementById('progressAmount');
+    const progressFoot = document.getElementById('progressFoot');
+    if(progress) progress.style.width = Math.max(0, Math.min(100, (spent / budget) * 100)) + '%';
+    if(progressAmount) progressAmount.textContent = fmt(spent).replace(' kr','') + ' / 7 000 kr';
+    if(progressFoot) progressFoot.textContent = fmt(remain) + ' kvar';
 
     const s1 = document.getElementById('weekCostSummary1');
     const s2 = document.getElementById('weekCostSummary2');
@@ -396,6 +443,44 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
       document.getElementById('syncText').textContent = 'Synkad';
     })
     .subscribe();
+
+
+  function setupAppView() {
+    // Mark each shopping-list card for shopping mode.
+    document.querySelectorAll('.card').forEach(card => {
+      const h2 = card.querySelector('h2');
+      if(h2 && /inköpslista/i.test(h2.textContent)) card.classList.add('shopping-card');
+    });
+
+    // Show today's meal from the current week (week 1).
+    const dayNames = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
+    const todayName = dayNames[new Date().getDay()];
+    const todayDay = [...document.querySelectorAll('#v1 .day')].find(el => el.querySelector('.weekday')?.textContent.trim() === todayName);
+    if(todayDay) {
+      const meal = todayDay.querySelector('.meal')?.textContent || '';
+      const ingredients = todayDay.querySelector('.ingredients')?.textContent || '';
+      const mealEl = document.getElementById('todayMeal');
+      const ingEl = document.getElementById('todayIngredients');
+      if(mealEl) mealEl.textContent = meal;
+      if(ingEl) ingEl.textContent = ingredients;
+      document.getElementById('todayRecipeLink')?.addEventListener('click', () => {
+        const details = todayDay.querySelector('.recipe-details');
+        if(details) details.open = true;
+        document.querySelector('#v1 .week-fold')?.setAttribute('open','');
+      });
+    }
+
+    const btn = document.getElementById('shoppingModeBtn');
+    if(btn) btn.addEventListener('click', () => {
+      document.body.classList.toggle('shopping-mode');
+      btn.textContent = document.body.classList.contains('shopping-mode') ? 'Klar' : 'Handla';
+      if(document.body.classList.contains('shopping-mode')) {
+        window.scrollTo({top:0,behavior:'smooth'});
+      }
+    });
+  }
+
+  setupAppView();
 
   sb.auth.getSession().then(({data})=>handleSession(data.session));
   sb.auth.onAuthStateChange((_event, session)=>handleSession(session));
