@@ -60,6 +60,9 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 .week-fold[open]>summary:after{content:"Dölj"}
 .week-fold .week-inner{padding-top:2px}
 
+
+.week-cost label{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.week-cost strong{font-size:18px;color:#243038;white-space:nowrap}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#v1">Vecka 1</a><a href="#v2">Vecka 2</a><a href="#v3">Vecka 3</a><a href="#v4">Vecka 4</a>
@@ -137,7 +140,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
         
     <div class="week-cost">
       <label>Faktisk kostnad vecka 1
-        <input inputmode="decimal" type="number" min="0" step="1" id="weekCost1" placeholder="0 kr">
+        <strong id="weekCostSummary1">0 kr</strong>
       </label>
     </div>
       </div>
@@ -156,7 +159,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
         
     <div class="week-cost">
       <label>Faktisk kostnad vecka 2
-        <input inputmode="decimal" type="number" min="0" step="1" id="weekCost2" placeholder="0 kr">
+        <strong id="weekCostSummary2">0 kr</strong>
       </label>
     </div>
       </div>
@@ -175,7 +178,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
         
     <div class="week-cost">
       <label>Faktisk kostnad vecka 3
-        <input inputmode="decimal" type="number" min="0" step="1" id="weekCost3" placeholder="0 kr">
+        <strong id="weekCostSummary3">0 kr</strong>
       </label>
     </div>
       </div>
@@ -194,7 +197,7 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
         
     <div class="week-cost">
       <label>Faktisk kostnad vecka 4
-        <input inputmode="decimal" type="number" min="0" step="1" id="weekCost4" placeholder="0 kr">
+        <strong id="weekCostSummary4">0 kr</strong>
       </label>
     </div>
       </div>
@@ -252,9 +255,9 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 
   function setBoth(n, value, origin=null) {
     const overview = document.getElementById('cost'+n);
-    const weekInput = document.getElementById('weekCost'+n);
+    const summary = document.getElementById('weekCostSummary'+n);
     if (overview && overview !== origin) overview.value = value || '';
-    if (weekInput && weekInput !== origin) weekInput.value = value || '';
+    if (summary) summary.textContent = fmt(value || 0);
   }
 
   function refreshDashboard() {
@@ -359,14 +362,8 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 
   for(let n=1;n<=4;n++) {
     const overview = document.getElementById('cost'+n);
-    const weekInput = document.getElementById('weekCost'+n);
 
     if(overview) overview.addEventListener('input', e => {
-      setBoth(n, e.target.value, e.target);
-      scheduleSave();
-    });
-
-    if(weekInput) weekInput.addEventListener('input', e => {
       setBoth(n, e.target.value, e.target);
       scheduleSave();
     });
