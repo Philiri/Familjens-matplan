@@ -150,7 +150,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 @media(max-width:520px){.extra-form{grid-template-columns:1fr 82px}.extra-form button{grid-column:1/-1;padding:10px}}
 
 .meal-actions{display:flex;gap:7px;align-items:center;margin-top:9px;flex-wrap:wrap}
-.move-meal-btn{border:0;background:#eef3ee;color:#33453a;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;cursor:pointer}
+.move-meal-btn{border:1px solid #d8e2d9;background:#f6faf6;color:#33453a;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:850;cursor:pointer}
 .day.skipped{opacity:.68;background:#f7f7f7}
 .day.skipped .meal{text-decoration:line-through}
 .skipped-badge,.carried-badge{display:inline-block;border-radius:999px;padding:4px 7px;font-size:10.5px;font-weight:850;margin-top:7px}
@@ -459,9 +459,10 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
           (meal.carried_over?'<span class="carried-badge">Flyttad från tidigare vecka</span>':'')+
           (skipped?'<span class="skipped-badge">Åt borta · flyttad vidare</span>':'')+
           (meal.notes?'<div class="tip">'+escapeHtml(meal.notes)+'</div>':'')+
-          (!skipped?'<details class="recipe-details"><summary>Visa recept</summary><ol>'+
+          (!skipped?'<div class="meal-actions"><button type="button" class="move-meal-btn" data-meal-id="'+escapeHtml(meal.id)+'">Äter borta → flytta till nästa vecka</button></div>'+
+          '<details class="recipe-details"><summary>Visa recept</summary><ol>'+
           steps.map(step=>'<li>'+escapeHtml(step)+'</li>').join('')+
-          '</ol></details><div class="meal-actions"><button type="button" class="move-meal-btn" data-meal-id="'+escapeHtml(meal.id)+'">Äter borta / flytta</button></div>':'')+
+          '</ol></details>':'')+
           '</div>';
       }).join('') : '<div class="empty-copy">Ingen meny är skapad för veckan ännu.</div>';
     }
