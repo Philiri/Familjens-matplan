@@ -187,6 +187,11 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .meal-edit-actions button{border:0;border-radius:9px;padding:9px 12px;font-weight:800;cursor:pointer}
 .meal-edit-actions button:first-child{background:#203040;color:#fff}
 .meal-edit-actions .secondary{background:#e9ece9;color:#334047}
+
+.shopping-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.shopping-card-head h2{margin:0}
+#toggleShoppingCardBtn{border:0;background:#eef1ef;color:#40504a;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;cursor:pointer}
+.shopping-card.collapsed #shoppingList{display:none}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -283,7 +288,10 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       </div>
 
       <div class="card shopping-card" id="shoppingCard">
-        <h2>Veckans inköpslista</h2>
+        <div class="shopping-card-head">
+          <h2>Veckans inköpslista</h2>
+          <button type="button" id="toggleShoppingCardBtn">Dölj inköpslista</button>
+        </div>
         <div id="shoppingList"><div class="loading-copy">Laddar inköpslistan…</div></div>
       </div>
 
@@ -1464,7 +1472,26 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     .subscribe();
 
 
+  function applyShoppingCardState() {
+    const hidden=localStorage.getItem('mealplan-shopping-hidden')==='1';
+    const card=document.getElementById('shoppingCard');
+    const btn=document.getElementById('toggleShoppingCardBtn');
+    if(!card || !btn) return;
+    card.classList.toggle('collapsed',hidden);
+    btn.textContent=hidden?'Visa inköpslista':'Dölj inköpslista';
+  }
+
+  function toggleShoppingCard() {
+    const card=document.getElementById('shoppingCard');
+    if(!card) return;
+    const hidden=!card.classList.contains('collapsed');
+    localStorage.setItem('mealplan-shopping-hidden',hidden?'1':'0');
+    applyShoppingCardState();
+  }
+
   function setupAppView() {
+    applyShoppingCardState();
+    document.getElementById('toggleShoppingCardBtn')?.addEventListener('click', toggleShoppingCard);
     const btn = document.getElementById('shoppingModeBtn');
     if(btn) btn.addEventListener('click', () => {
       document.body.classList.toggle('shopping-mode');
