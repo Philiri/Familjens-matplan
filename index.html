@@ -205,6 +205,21 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .store-card.best{background:#f3f8f3;border-color:#d9e8db}
 .store-card small{display:block;color:#737b7e;margin-top:2px;font-size:10.5px}
 @media(max-width:480px){.store-comparison{grid-template-columns:1fr 1fr}.store-card{padding:8px}.store-card strong{font-size:11.5px}.store-card span{font-size:12px}}
+
+.compact-section{margin-top:10px!important}
+.compact-fold{background:#fff;border:1px solid #e7ece8;border-radius:14px;overflow:hidden}
+.compact-fold>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;cursor:pointer;list-style:none}
+.compact-fold>summary::-webkit-details-marker{display:none}
+.compact-fold>summary strong{display:block;font-size:14px;margin-top:2px}
+.compact-fold>summary::after{content:'›';font-size:20px;line-height:1;transform:rotate(90deg);color:#7b8580;margin-left:4px}
+.compact-fold[open]>summary::after{transform:rotate(-90deg)}
+.compact-body{padding:0 10px 10px}
+.compact-card{box-shadow:none!important;border:0!important;padding:6px 2px 2px!important;margin:0!important}
+.compact-card .next-top{margin-bottom:2px}
+.compact-card .next-top h2{font-size:17px;margin:0}
+.compact-card #nextWeekText{font-size:12.5px;color:#6e7678;margin:4px 0 8px}
+#history .compact-body{padding-top:2px}
+#history .empty-copy{padding:8px 2px}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -317,65 +332,81 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     </div>
   </details>
 </section>
-<section class="rolling-next locked" id="nextWeek">
-  <div class="next-card">
-    <div class="next-top">
+<section class="rolling-next locked compact-section" id="nextWeek">
+  <details class="compact-fold" open>
+    <summary>
       <div>
         <div class="home-eyebrow">NÄSTA VECKA</div>
-        <h2 id="nextWeekTitle">Laddar nästa vecka…</h2>
-        <div class="week-date" id="nextWeekDate"></div>
+        <strong id="nextWeekSummary">Laddar nästa vecka…</strong>
       </div>
       <span class="offer-badge" id="nextWeekBadge">Planerad</span>
-    </div>
-    <p id="nextWeekText">Nästa vecka hämtas från Supabase.</p>
-    <div id="storeComparison" class="store-comparison"></div>
-    <div id="nextWeekOffers" class="offer-list"></div>
-    <div id="nextWeekMeals" class="next-meals"></div>
-    <div class="meal-edit-panel hidden" id="mealEditPanel">
-      <div class="section-title">Byt rätt</div>
-      <input type="hidden" id="editMealId">
-      <select id="editFavoriteSelect"><option value="">Välj favorit eller skriv egen</option></select>
-      <input id="editMealTitle" type="text" placeholder="Rätt">
-      <input id="editMealIngredients" type="text" placeholder="Ingredienser">
-      <div class="meal-edit-actions">
-        <button type="button" id="saveMealEditBtn">Spara</button>
-        <button type="button" class="secondary" id="cancelMealEditBtn">Avbryt</button>
+    </summary>
+    <div class="compact-body">
+      <div class="next-card compact-card">
+        <div class="next-top">
+          <div>
+            <h2 id="nextWeekTitle">Laddar nästa vecka…</h2>
+            <div class="week-date" id="nextWeekDate"></div>
+          </div>
+        </div>
+        <p id="nextWeekText"></p>
+        <div id="storeComparison" class="store-comparison"></div>
+        <div id="nextWeekOffers" class="offer-list"></div>
+        <div id="nextWeekMeals" class="next-meals"></div>
+        <div class="meal-edit-panel hidden" id="mealEditPanel">
+          <div class="section-title">Byt rätt</div>
+          <input type="hidden" id="editMealId">
+          <select id="editFavoriteSelect"><option value="">Välj favorit eller skriv egen</option></select>
+          <input id="editMealTitle" type="text" placeholder="Rätt">
+          <input id="editMealIngredients" type="text" placeholder="Ingredienser">
+          <div class="meal-edit-actions">
+            <button type="button" id="saveMealEditBtn">Spara</button>
+            <button type="button" class="secondary" id="cancelMealEditBtn">Avbryt</button>
+          </div>
+          <div class="auth-status" id="mealEditStatus"></div>
+        </div>
       </div>
-      <div class="auth-status" id="mealEditStatus"></div>
     </div>
-
-  </div>
+  </details>
 </section>
 
 
-<section class="week locked" id="mealRules">
-  <div class="budget-card">
-    <div class="history-head">
+<section class="week locked compact-section" id="mealRules">
+  <details class="compact-fold">
+    <summary>
       <div>
         <div class="home-eyebrow">MATREGLER</div>
-        <h2>Så planerar vi veckan</h2>
+        <strong>Så planerar vi veckan</strong>
       </div>
       <span class="offer-badge" id="rulesCount">0 regler</span>
+    </summary>
+    <div class="compact-body">
+      <div class="budget-card compact-card">
+        <div id="mealRulesList"><div class="loading-copy">Laddar regler…</div></div>
+        <div class="rule-form">
+          <input id="newRuleText" type="text" placeholder="T.ex. fisk minst en gång i veckan">
+          <button type="button" id="addRuleBtn">Lägg till regel</button>
+        </div>
+      </div>
     </div>
-    <div id="mealRulesList"><div class="loading-copy">Laddar regler…</div></div>
-    <div class="rule-form">
-      <input id="newRuleText" type="text" placeholder="T.ex. fisk minst en gång i veckan">
-      <button type="button" id="addRuleBtn">Lägg till regel</button>
-    </div>
-  </div>
+  </details>
 </section>
 
-<section class="week locked" id="history">
-  <div class="budget-card">
-    <div class="history-head">
+<section class="week locked compact-section" id="history">
+  <details class="compact-fold" id="historyFold">
+    <summary>
       <div>
         <div class="home-eyebrow">HISTORIK</div>
-        <h2>Tidigare veckor</h2>
+        <strong>Tidigare veckor</strong>
       </div>
       <span class="offer-badge" id="historyCount">0 veckor</span>
+    </summary>
+    <div class="compact-body">
+      <div class="budget-card compact-card">
+        <div id="historyList"><div class="loading-copy">Laddar historik…</div></div>
+      </div>
     </div>
-    <div id="historyList"><div class="loading-copy">Laddar historik…</div></div>
-  </div>
+  </details>
 </section>
 
 </main>
@@ -684,8 +715,9 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(!list) return;
     list.innerHTML=householdMealRules.length ? householdMealRules.map((r,i)=>{
       const taco=/taco/i.test(r.rule||'') && String(r.day||'').toLowerCase()==='friday';
-      return '<div class="rule-row"><div><strong>'+escapeHtml(r.rule||'Regel')+'</strong>'+
-        (r.day?'<small>'+escapeHtml(r.day)+'</small>':'')+
+      const label=taco?'Taco eller taco-relaterat varje fredag':(r.rule||'Regel');
+      return '<div class="rule-row"><div><strong>'+escapeHtml(label)+'</strong>'+
+        (!taco && r.day?'<small>'+escapeHtml(r.day)+'</small>':'')+
         '</div>'+(taco?'<span class="rule-fixed">Fast</span>':'<button type="button" class="rule-delete" data-rule-index="'+i+'">×</button>')+'</div>';
     }).join('') : '<div class="empty-copy">Inga regler ännu.</div>';
   }
@@ -724,6 +756,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   function renderNextWeek(week, meals) {
     plannedMealsCache=meals || [];
     const title = document.getElementById('nextWeekTitle');
+    const summary = document.getElementById('nextWeekSummary');
     const date = document.getElementById('nextWeekDate');
     const badge = document.getElementById('nextWeekBadge');
     const text = document.getElementById('nextWeekText');
@@ -732,22 +765,24 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     const storeEl = document.getElementById('storeComparison');
 
     if(!week) {
-      if(title) title.textContent = 'Ingen nästa vecka skapad ännu';
+      if(title) title.textContent = 'Ingen vecka planerad ännu';
+      if(summary) summary.textContent = 'Ingen vecka planerad ännu';
       if(date) date.textContent = '';
       if(badge) badge.textContent = 'Saknas';
-      if(text) text.textContent = 'Nästa vecka skapas automatiskt från den aktiva veckan.';
+      if(text) text.textContent = '';
       if(list) list.innerHTML = '';
       if(offersEl) offersEl.innerHTML = '';
       if(storeEl) storeEl.innerHTML = '';
       return;
     }
 
-    if(title) title.textContent = (meals || []).length ? 'Menyn är förberedd' : 'Planeras när erbjudandena är aktuella';
-    if(date) date.textContent = formatWeekLabel(week.week_start);
-    if(badge) badge.textContent = (meals || []).length ? ((meals || []).length + ' middagar') : 'Ej planerad';
-    if(text) text.textContent = (meals || []).length
-      ? 'Nästa vecka ligger klar i Supabase och blir automatiskt aktiv när veckan börjar.'
-      : 'När ICA-erbjudandena är aktuella fyller vi den här veckan med meny och inköpslista.';
+    const mealCount=(meals || []).length;
+    const weekLabel=formatWeekLabel(week.week_start);
+    if(title) title.textContent = mealCount ? 'Planerad meny' : 'Planeras när erbjudandena är aktuella';
+    if(summary) summary.textContent = weekLabel + ' · ' + (mealCount ? (mealCount + (mealCount===1?' middag':' middagar')) : 'ej planerad');
+    if(date) date.textContent = weekLabel;
+    if(badge) badge.textContent = mealCount ? 'Planerad' : 'Ej planerad';
+    if(text) text.textContent = '';
 
     if(storeEl) {
       const comp=week.store_comparison || {};
@@ -808,7 +843,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(!list) return;
 
     if(!archived.length) {
-      list.innerHTML = '<div class="empty-copy">Ingen tidigare vecka ännu. Den första hamnar här när nästa vecka blir aktiv.</div>';
+      list.innerHTML = '<div class="empty-copy">Ingen historik ännu.</div>';
       return;
     }
 
