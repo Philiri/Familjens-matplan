@@ -195,6 +195,11 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
 .shopping-card.collapsed .manual-delete{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#f3f4f3;color:#596267;font-weight:900;cursor:pointer;margin-left:4px}
 @media(max-width:520px){}
+
+.today-status{font-size:12px;font-weight:800;color:#6d7578;margin-top:4px}
+.today-card.skipped-today #todayMeal{text-decoration:line-through;opacity:.62}
+.today-card.skipped-today #todayIngredients{opacity:.55}
+.today-card.skipped-today .today-status{color:#7a5b35}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -226,6 +231,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     <div>
       <span class="today-label">Idag äter vi</span>
       <h2 id="todayMeal">Laddar dagens middag…</h2>
+      <div id="todayStatus" class="today-status"></div>
       <p id="todayIngredients"></p>
     </div>
     <a class="today-link" id="todayRecipeLink" href="#v1">Visa recept</a>
@@ -570,12 +576,20 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     }
 
     const todayIso=new Date().toLocaleDateString('sv-SE');
-    const todayMeal=currentMeals.find(m=>m.meal_date===todayIso && m.status!=='skipped')||currentMeals.find(m=>m.status!=='skipped');
+    const todayMeal=currentMeals.find(m=>m.meal_date===todayIso);
     const todayMealEl=document.getElementById('todayMeal');
     const todayIngEl=document.getElementById('todayIngredients');
+    const todayStatusEl=document.getElementById('todayStatus');
+    const todayCardEl=document.querySelector('.today-card');
+    const todaySkipped=todayMeal?.status==='skipped';
+
     if(todayMealEl) todayMealEl.textContent=todayMeal?.title||'Ingen middag planerad idag';
     if(todayIngEl) todayIngEl.textContent=todayMeal?.ingredients||'';
+    if(todayStatusEl) todayStatusEl.textContent=todaySkipped?'Äter borta idag · rätten är flyttad till nästa vecka':'';
+    todayCardEl?.classList.toggle('skipped-today',todaySkipped);
+
     const recipeLink=document.getElementById('todayRecipeLink');
+    if(recipeLink) recipeLink.style.display=todaySkipped?'none':'';
     if(recipeLink) recipeLink.onclick=e=>{
       e.preventDefault();
       document.querySelector('#v1 .week-fold')?.setAttribute('open','');
