@@ -343,7 +343,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       </div>
       <div class="auth-status" id="mealEditStatus"></div>
     </div>
-    <div class="next-note" id="nextWeekNote">Du får en påminnelse på söndagar att planera nästa vecka.</div>
+
   </div>
 </section>
 
@@ -728,7 +728,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     const badge = document.getElementById('nextWeekBadge');
     const text = document.getElementById('nextWeekText');
     const list = document.getElementById('nextWeekMeals');
-    const note = document.getElementById('nextWeekNote');
     const offersEl = document.getElementById('nextWeekOffers');
     const storeEl = document.getElementById('storeComparison');
 
@@ -795,9 +794,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     }
     populateEditFavorites();
 
-    if(note) note.textContent = (meals || []).length
-      ? 'Klar för nästa veckobyte.'
-      : 'Du får en påminnelse på söndagar att planera nästa vecka.';
   }
 
 
