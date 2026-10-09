@@ -200,6 +200,13 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .today-card.skipped-today #todayMeal{text-decoration:line-through;opacity:.62}
 .today-card.skipped-today #todayIngredients{opacity:.55}
 .today-card.skipped-today .today-status{color:#7a5b35}
+
+.store-comparison{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px}
+.store-card{border:1px solid #e6ebe7;border-radius:12px;padding:9px 10px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.store-card strong{font-size:12.5px}.store-card span{font-size:13px;font-weight:850;white-space:nowrap}
+.store-card.best{background:#f3f8f3;border-color:#d9e8db}
+.store-card small{display:block;color:#737b7e;margin-top:2px;font-size:10.5px}
+@media(max-width:480px){.store-comparison{grid-template-columns:1fr 1fr}.store-card{padding:8px}.store-card strong{font-size:11.5px}.store-card span{font-size:12px}}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -323,6 +330,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       <span class="offer-badge" id="nextWeekBadge">Planerad</span>
     </div>
     <p id="nextWeekText">Nästa vecka hämtas från Supabase.</p>
+    <div id="storeComparison" class="store-comparison"></div>
     <div id="nextWeekOffers" class="offer-list"></div>
     <div id="nextWeekMeals" class="next-meals"></div>
     <div class="next-editor">
@@ -753,6 +761,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     const list = document.getElementById('nextWeekMeals');
     const note = document.getElementById('nextWeekNote');
     const offersEl = document.getElementById('nextWeekOffers');
+    const storeEl = document.getElementById('storeComparison');
 
     if(!week) {
       if(title) title.textContent = 'Ingen nästa vecka skapad ännu';
@@ -761,6 +770,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       if(text) text.textContent = 'Nästa vecka skapas automatiskt från den aktiva veckan.';
       if(list) list.innerHTML = '';
       if(offersEl) offersEl.innerHTML = '';
+      if(storeEl) storeEl.innerHTML = '';
       return;
     }
 
@@ -770,6 +780,27 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(text) text.textContent = (meals || []).length
       ? 'Nästa vecka ligger klar i Supabase och blir automatiskt aktiv när veckan börjar.'
       : 'När ICA-erbjudandena är aktuella fyller vi den här veckan med meny och inköpslista.';
+
+    if(storeEl) {
+      const comp=week.store_comparison || {};
+      const ica=comp.ica || null;
+      const willys=comp.willys || null;
+      if(ica || willys) {
+        const vals=[ica,willys].filter(Boolean).map(x=>Number(x.total||0)).filter(n=>n>0);
+        const best=vals.length?Math.min(...vals):null;
+        const card=(label,obj)=>{
+          if(!obj) return '';
+          const total=Number(obj.total||0);
+          const bestClass=best && total===best?' best':'';
+          return '<div class="store-card'+bestClass+'"><div><strong>'+escapeHtml(label)+'</strong>'+
+            (bestClass?'<small>Billigast denna vecka</small>':'')+
+            '</div><span>'+escapeHtml(fmt(total))+'</span></div>';
+        };
+        storeEl.innerHTML=card('ICA Kvantum',ica)+card('Willys',willys);
+      } else {
+        storeEl.innerHTML='';
+      }
+    }
 
     if(offersEl) {
       const offers=Array.isArray(week.offers)?week.offers:[];
@@ -884,7 +915,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
     let { data: weeks, error: weekError } = await sb
       .from('weeks')
-      .select('id, week_start, status, planned_budget, notes, offers')
+      .select('id, week_start, status, planned_budget, notes, offers, store_comparison')
       .eq('household_id', householdId)
       .order('week_start', { ascending:true });
 
@@ -904,7 +935,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
     if(await maybeRollWeekForward(activeWeek, plannedWeek)) {
       const reload = await sb.from('weeks')
-        .select('id, week_start, status, planned_budget, notes, offers')
+        .select('id, week_start, status, planned_budget, notes, offers, store_comparison')
         .eq('household_id', householdId)
         .order('week_start', { ascending:true });
       weeks = reload.data || [];
@@ -920,7 +951,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
     const { data: refreshedWeeks } = await sb
       .from('weeks')
-      .select('id, week_start, status, planned_budget, notes, offers')
+      .select('id, week_start, status, planned_budget, notes, offers, store_comparison')
       .eq('household_id', householdId)
       .order('week_start', { ascending:true });
 
