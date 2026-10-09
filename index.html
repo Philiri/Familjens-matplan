@@ -159,11 +159,9 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
 .undo-move-btn{border:1px solid #e3d7c7;background:#fff8ef;color:#6b4d2f;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:850;cursor:pointer}
 
-.next-editor{margin-top:12px;padding-top:12px;border-top:1px solid #edf0ed}
-.favorite-picker{display:grid;grid-template-columns:1.3fr 1fr auto;gap:7px}
-.favorite-picker select,.rule-form input{border:1px solid #dce2dd;border-radius:10px;padding:9px 10px;background:#fff;font:inherit;min-width:0}
-.favorite-picker button,.rule-form button,.next-edit-btn,.next-remove-btn{border:0;border-radius:9px;font-weight:800;cursor:pointer}
-.favorite-picker button,.rule-form button{background:#203040;color:#fff;padding:9px 11px}
+.rule-form input{border:1px solid #dce2dd;border-radius:10px;padding:9px 10px;background:#fff;font:inherit;min-width:0}
+.rule-form button,.next-edit-btn,.next-remove-btn{border:0;border-radius:9px;font-weight:800;cursor:pointer}
+.rule-form button{background:#203040;color:#fff;padding:9px 11px}
 .next-meal-row{align-items:center}
 .next-meal-main{display:grid;grid-template-columns:44px 1fr;gap:7px;align-items:center;min-width:0}
 .next-meal-actions{display:flex;gap:5px;flex:0 0 auto}
@@ -175,7 +173,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .rule-row strong{font-size:13.5px}.rule-row small{display:block;color:#727a7d;margin-top:2px}
 .rule-fixed{background:#eef3ee;color:#47604b;border-radius:999px;padding:5px 8px;font-size:10.5px;font-weight:850}
 .rule-delete{border:0;background:#f3f4f3;color:#596267;width:30px;height:30px;border-radius:10px;font-weight:800;cursor:pointer}
-@media(max-width:620px){.favorite-picker{grid-template-columns:1fr}.rule-form{grid-template-columns:1fr}.rule-form button{padding:10px}}
+@media(max-width:620px){.rule-form{grid-template-columns:1fr}.rule-form button{padding:10px}}
 
 .next-move-select{border:1px solid #dce2dd;background:#fff;color:#334047;border-radius:9px;padding:6px 7px;font-size:12px;font-weight:750;max-width:118px}
 @media(max-width:620px){.next-meal-row{align-items:flex-start}.next-meal-actions{flex-wrap:wrap;justify-content:flex-end}.next-move-select{max-width:108px}}
@@ -333,14 +331,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     <div id="storeComparison" class="store-comparison"></div>
     <div id="nextWeekOffers" class="offer-list"></div>
     <div id="nextWeekMeals" class="next-meals"></div>
-    <div class="next-editor">
-      <div class="section-title">Lägg in favorit</div>
-      <div class="favorite-picker">
-        <select id="favoriteMealSelect"><option value="">Välj favorit</option></select>
-        <select id="favoriteDaySelect"><option value="">Välj dag</option></select>
-        <button type="button" id="useFavoriteBtn">Lägg in</button>
-      </div>
-    </div>
     <div class="meal-edit-panel hidden" id="mealEditPanel">
       <div class="section-title">Byt rätt</div>
       <input type="hidden" id="editMealId">
@@ -700,27 +690,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     }).join('') : '<div class="empty-copy">Inga regler ännu.</div>';
   }
 
-  function populateFavoriteEditor() {
-    const favSel=document.getElementById('favoriteMealSelect');
-    const daySel=document.getElementById('favoriteDaySelect');
-    if(favSel) {
-      favSel.innerHTML='<option value="">Välj favorit</option>'+currentFavorites.map(f=>
-        '<option value="'+escapeHtml(f.id)+'">'+escapeHtml(f.title)+'</option>'
-      ).join('');
-    }
-    if(daySel && plannedWeekStart) {
-      const start=new Date(plannedWeekStart+'T12:00:00');
-      const options=[];
-      for(let i=0;i<7;i++){
-        const d=new Date(start); d.setDate(start.getDate()+i);
-        const iso=d.toISOString().slice(0,10);
-        const label=d.toLocaleDateString('sv-SE',{weekday:'long'});
-        options.push('<option value="'+iso+'">'+escapeHtml(label.charAt(0).toUpperCase()+label.slice(1))+'</option>');
-      }
-      daySel.innerHTML='<option value="">Välj dag</option>'+options.join('');
-    }
-  }
-
   function populateEditFavorites() {
     const sel=document.getElementById('editFavoriteSelect');
     if(!sel) return;
@@ -824,7 +793,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
           '</div></div>';
       }).join('');
     }
-    populateFavoriteEditor();
     populateEditFavorites();
 
     if(note) note.textContent = (meals || []).length
@@ -1377,40 +1345,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(sessionData.session?.user) await loadData(sessionData.session.user.id);
   }
 
-  async function useFavoriteOnDay() {
-    const favId=document.getElementById('favoriteMealSelect')?.value;
-    const date=document.getElementById('favoriteDaySelect')?.value;
-    if(!favId || !date || !plannedWeekId) return;
-    const fav=currentFavorites.find(f=>f.id===favId);
-    if(!fav) return;
-    if(isFridayIso(date) && !isTacoRelated(fav.title)) {
-      window.alert('Fredag ska vara taco-relaterad.');
-      return;
-    }
-
-    const existing=plannedMealsCache.find(m=>m.meal_date===date);
-    let savedMeal=null;
-    if(existing) {
-      const {data,error}=await sb.from('meals').update({
-        title:fav.title,ingredients:fav.ingredients,recipe:fav.recipe||[],notes:fav.notes||null,
-        carried_over:false,source_meal_id:null,status:'planned'
-      }).eq('id',existing.id).select('id,week_id,ingredients').single();
-      if(error) { console.error(error); return; }
-      savedMeal=data;
-    } else {
-      const {data,error}=await sb.from('meals').insert({
-        week_id:plannedWeekId,meal_date:date,title:fav.title,ingredients:fav.ingredients,
-        recipe:fav.recipe||[],notes:fav.notes||null,sort_order:plannedMealsCache.length,status:'planned'
-      }).select('id,week_id,ingredients').single();
-      if(error) { console.error(error); return; }
-      savedMeal=data;
-    }
-    await syncShoppingForMeal(savedMeal);
-    const {data:sessionData}=await sb.auth.getSession();
-    if(sessionData.session?.user) await loadData(sessionData.session.user.id);
-  }
-
-
   async function addMealRule() {
     const input=document.getElementById('newRuleText');
     const rule=(input?.value||'').trim();
@@ -1526,7 +1460,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(select) movePlannedMeal(select.dataset.mealId, select.value);
   });
 
-  document.getElementById('useFavoriteBtn')?.addEventListener('click', useFavoriteOnDay);
   document.getElementById('editFavoriteSelect')?.addEventListener('change', e => {
     const fav=currentFavorites.find(f=>f.id===e.target.value);
     if(!fav) return;
