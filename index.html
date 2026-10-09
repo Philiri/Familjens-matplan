@@ -527,6 +527,13 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(bar) bar.style.width=(total?(done/total)*100:0)+'%';
   }
 
+  function formatNextMealLabel(dateString) {
+    if(!dateString) return '';
+    const d=new Date(dateString+'T12:00:00');
+    const weekday=d.toLocaleDateString('sv-SE',{weekday:'long'});
+    return 'Nästa planerade middag är '+weekday.charAt(0).toUpperCase()+weekday.slice(1);
+  }
+
   function renderWeekContent(meals, shopping) {
     currentMeals=meals || [];
     const mealsList=document.getElementById('mealsList');
@@ -583,9 +590,20 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     const todayCardEl=document.querySelector('.today-card');
     const todaySkipped=todayMeal?.status==='skipped';
 
-    if(todayMealEl) todayMealEl.textContent=todayMeal?.title||'Ingen middag planerad idag';
-    if(todayIngEl) todayIngEl.textContent=todayMeal?.ingredients||'';
-    if(todayStatusEl) todayStatusEl.textContent=todaySkipped?'Äter borta idag · rätten är flyttad till nästa vecka':'';
+    const upcomingMeals=currentMeals
+      .filter(m=>m.status!=='skipped' && m.meal_date>todayIso)
+      .sort((a,b)=>String(a.meal_date).localeCompare(String(b.meal_date)));
+    const nextMeal=upcomingMeals[0] || null;
+
+    if(todaySkipped) {
+      if(todayMealEl) todayMealEl.textContent='Äter borta idag';
+      if(todayIngEl) todayIngEl.textContent=nextMeal ? 'Nästa middag: '+nextMeal.title : '';
+      if(todayStatusEl) todayStatusEl.textContent=nextMeal ? formatNextMealLabel(nextMeal.meal_date) : 'Ingen mer middag planerad den här veckan';
+    } else {
+      if(todayMealEl) todayMealEl.textContent=todayMeal?.title||'Ingen middag planerad idag';
+      if(todayIngEl) todayIngEl.textContent=todayMeal?.ingredients||'';
+      if(todayStatusEl) todayStatusEl.textContent='';
+    }
     todayCardEl?.classList.toggle('skipped-today',todaySkipped);
 
     const recipeLink=document.getElementById('todayRecipeLink');
