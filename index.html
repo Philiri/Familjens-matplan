@@ -1151,10 +1151,13 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
       const used=new Set((existingMeals||[]).map(m=>m.meal_date).filter(Boolean));
       const start=new Date(plannedWeekStart+'T12:00:00');
+      const tacoMove=isTacoRelated(meal.title);
+      const preferredOffsets=tacoMove ? [4] : [0,1,2,3,5,6,4];
       let targetDate=null;
-      for(let i=0;i<7;i++) {
+
+      for(const offset of preferredOffsets) {
         const d=new Date(start);
-        d.setDate(start.getDate()+i);
+        d.setDate(start.getDate()+offset);
         const iso=d.toISOString().slice(0,10);
         if(!used.has(iso)) { targetDate=iso; break; }
       }
