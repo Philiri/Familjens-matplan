@@ -227,7 +227,19 @@ body.shopping-mode.shopping-next #nextWeek .compact-fold>summary{display:none}
 body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){display:none!important}
 #nextShoppingCard{box-shadow:none;padding:0;margin:14px 0 24px}
 #nextShoppingCard .qty{white-space:normal;text-align:right;max-width:140px}
-.weekly-savings{font-size:13px;line-height:1.45;color:#47604b;margin:4px 0 10px;font-weight:700}\n#offersCard .weekly-savings{margin:0}\n</style></head><body>
+.weekly-savings{font-size:13px;line-height:1.45;color:#47604b;margin:4px 0 10px;font-weight:700}\n#offersCard .weekly-savings{margin:0}\n
+/* Week and month use independent budget states: amber from 80%, red above 100%. */
+.budget-within{--budget-color:#28623b;--budget-bg:#edf6ef}
+.budget-near{--budget-color:#8a5800;--budget-bg:#fff4d8}
+.budget-over{--budget-color:#a52d2d;--budget-bg:#fdecec}
+.budget-neutral{--budget-color:#596267;--budget-bg:#f2f4f3}
+.bigmetric.budget-within,.bigmetric.budget-near,.bigmetric.budget-over,.bigmetric.budget-neutral,
+.week-cost.budget-within,.week-cost.budget-near,.week-cost.budget-over,.week-cost.budget-neutral{background:var(--budget-bg);color:var(--budget-color)}
+.bigmetric[class*="budget-"] b,.week-cost[class*="budget-"] strong{color:var(--budget-color)}
+.week-budget-status[class*="budget-"]{background:var(--budget-bg);color:var(--budget-color);border-top:0;border-radius:9px;padding:9px 10px}
+#budgetProgressBar[class*="budget-"]{background:var(--budget-color)}
+#progressAmount[class*="budget-"],#progressFoot[class*="budget-"]{color:var(--budget-color)}
+</style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
 </div></header><main>
@@ -456,6 +468,17 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     return d.toLocaleDateString('sv-SE', opts) + '–' + end.toLocaleDateString('sv-SE', opts);
   }
 
+  function budgetState(spent, budget) {
+    if(!(budget>0)) return spent>0?'over':'neutral';
+    return spent>budget?'over':spent>=budget*0.8?'near':'within';
+  }
+
+  function setBudgetState(el, state) {
+    if(!el) return;
+    el.classList.remove('budget-within','budget-near','budget-over','budget-neutral');
+    el.classList.add('budget-'+state);
+  }
+
   function refreshDashboard() {
     const weeklyShop=readNum('cost1');
     const extras=currentExtraExpenses.reduce((sum,e)=>sum+Number(e.amount||0),0);
@@ -476,9 +499,9 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     const progress=document.getElementById('budgetProgressBar');
     const progressAmount=document.getElementById('progressAmount');
     const progressFoot=document.getElementById('progressFoot');
-    if(progress) progress.style.width=Math.max(0,Math.min(100,(monthSpent/monthBudget)*100))+'%';
+    if(progress) progress.style.width=(monthBudget>0?Math.max(0,Math.min(100,(monthSpent/monthBudget)*100)):monthSpent>0?100:0)+'%';
     if(progressAmount) progressAmount.textContent=fmt(monthSpent).replace(' kr','')+' / '+fmt(monthBudget);
-    if(progressFoot) progressFoot.textContent=fmt(remain)+' kvar';
+    if(progressFoot) progressFoot.textContent=remain>=0?fmt(remain)+' kvar':fmt(Math.abs(remain))+' över månadsbudgeten';
 
     const status=document.getElementById('weekBudgetStatus');
     if(status) {
@@ -490,6 +513,10 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
 
     const summary=document.getElementById('weekCostSummary1');
     if(summary) summary.textContent=fmt(currentWeek);
+    const weekState=budgetState(currentWeek,weeklyTarget);
+    const monthState=budgetState(monthSpent,monthBudget);
+    [status,summary?.closest('.week-cost'),currentEl?.closest('.bigmetric')].forEach(el=>setBudgetState(el,weekState));
+    [progress,progressAmount,progressFoot,spentEl?.closest('.bigmetric'),remainEl?.closest('.bigmetric')].forEach(el=>setBudgetState(el,monthState));
   }
 
   function shoppingName(item) {
