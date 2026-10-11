@@ -59,6 +59,8 @@ main{max-width:760px;margin:auto;padding:12px 10px 42px}.week{scroll-margin-top:
 .week-fold>summary:after{content:"Visa";font-size:12px;font-weight:700;background:#ffffff22;padding:6px 9px;border-radius:999px}
 .week-fold[open]>summary:after{content:"Dölj"}
 .week-fold .week-inner{padding-top:2px}
+.budget-fold>summary:after{content:"";width:9px;height:9px;padding:0;margin-right:4px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;border-radius:0;background:transparent;transform:rotate(45deg)}
+.budget-fold[open]>summary:after{content:"";transform:rotate(225deg)}
 
 
 .week-cost label{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -312,8 +314,9 @@ body.shopping-mode #shoppingList{display:block!important}
 </section>
 
 <section class="week locked" id="budget">
+  <details class="week-fold budget-fold" id="budgetOverview">
+    <summary><span>Budgetöversikt</span></summary>
   <div class="budget-card">
-    <h2>Budgetöversikt</h2>
     <div class="budget-grid">
       <div class="bigmetric"><span>Månadsbudget</span><b id="monthBudgetMetric">7 000 kr</b></div>
       <div class="bigmetric"><span>Riktmärke aktuell vecka</span><b id="weekTargetMetric">1 200 kr</b></div>
@@ -357,6 +360,7 @@ body.shopping-mode #shoppingList{display:block!important}
 
     <div class="budget-note">Veckohandlingen och varje extra köp sparas separat. Då ser ni exakt vart småhandlingen tar vägen.</div>
   </div>
+  </details>
 </section>
 <section class="week locked" id="v1">
   <details class="week-fold" open>
@@ -1839,6 +1843,7 @@ body.shopping-mode #shoppingList{display:block!important}
     document.getElementById('toggleShoppingCardBtn')?.addEventListener('click', toggleShoppingCard);
     document.querySelectorAll('.nav a').forEach(link=>link.addEventListener('click',()=>{
       document.body.classList.remove('shopping-mode','shopping-next');
+      if(link.getAttribute('href')==='#budget') document.getElementById('budgetOverview').open=true;
       syncShoppingView();
     }));
     const btn=document.getElementById('shoppingModeBtn');
