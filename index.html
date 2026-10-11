@@ -220,6 +220,13 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 .compact-card #nextWeekText{font-size:12.5px;color:#6e7678;margin:4px 0 8px}
 #history .compact-body{padding-top:2px}
 #history .empty-copy{padding:8px 2px}
+
+body.shopping-mode.shopping-next #v1{display:none!important}
+body.shopping-mode.shopping-next #nextWeek{display:block!important}
+body.shopping-mode.shopping-next #nextWeek .compact-fold>summary{display:none}
+body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){display:none!important}
+#nextShoppingCard{box-shadow:none;padding:0;margin:14px 0 24px}
+#nextShoppingCard .qty{white-space:normal;text-align:right;max-width:140px}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -350,8 +357,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
           </div>
         </div>
         <p id="nextWeekText"></p>
-        <div id="storeComparison" class="store-comparison"></div>
-        <div id="nextWeekOffers" class="offer-list"></div>
+        <div class="shopping-card" id="nextShoppingCard"><h2>Nästa veckas inköpslista</h2><div id="nextShoppingList"></div><p class="budget-note">Kontrollera vad ni redan har hemma innan ni handlar.</p></div><h2>Veckans middagar</h2>
         <div id="nextWeekMeals" class="next-meals"></div>
 
       </div>
@@ -487,6 +493,71 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(summary) summary.textContent=fmt(currentWeek);
   }
 
+  function shoppingName(item) {
+    if(item.is_manual) return item.name;
+    return /^ost(?:,| till|$)/i.test(item.name)?'Ost':item.name;
+  }
+
+  function combineShoppingQuantities(items) {
+    const values=items.map(item=>String(item.quantity||'').trim());
+    const parsed=values.map(value=>{
+      const m=value.match(/^(\d+(?:[.,]\d+)?)\s*(kg|g|liter|l|dl|ml|st)\.?$/i);
+      if(!m) return null;
+      const unit=m[2].toLowerCase();
+      const type=['kg','g'].includes(unit)?'weight':['liter','l','dl','ml'].includes(unit)?'volume':'count';
+      const factor={kg:1000,g:1,liter:1000,l:1000,dl:100,ml:1,st:1}[unit];
+      return {type,value:Number(m[1].replace(',','.'))*factor};
+    });
+    if(parsed.every(Boolean) && parsed.every(p=>p.type===parsed[0].type)) {
+      const total=parsed.reduce((n,p)=>n+p.value,0);
+      const type=parsed[0].type;
+      const divisor=type==='weight'&&total>=1000?1000:type==='volume'&&total>=1000?1000:type==='volume'&&total>=100?100:1;
+      const unit=type==='weight'?(divisor===1000?'kg':'g'):type==='volume'?(divisor===1000?'liter':divisor===100?'dl':'ml'):'st';
+      return (total/divisor).toLocaleString('sv-SE',{maximumFractionDigits:2})+' '+unit;
+    }
+    return values.filter(Boolean).join(' + ');
+  }
+
+  function renderShoppingList(listId, shopping, cardId) {
+    const list=document.getElementById(listId);
+    if(!list) return;
+    const grouped=new Map();
+    for(const item of shopping||[]) {
+      const category=/fryst/i.test(item.name)?'Fryst':/havregryn/i.test(item.name)?'Skafferi':item.category||'Övrigt';
+      const name=shoppingName(item);
+      const key=category+'|'+name.toLocaleLowerCase('sv-SE')+(item.is_manual?'|'+item.id:'');
+      if(!grouped.has(key)) grouped.set(key,{category,name,items:[]});
+      grouped.get(key).items.push(item);
+    }
+    const categories=['Frukt & grönt','Kött & fisk','Mejeri & frukost','Bröd','Fryst','Skafferi','Övrigt'];
+    const rows=[...grouped.values()].sort((a,b)=>{
+      const rank=c=>categories.includes(c)?categories.indexOf(c):categories.length;
+      return rank(a.category)-rank(b.category)||a.name.localeCompare(b.name,'sv-SE');
+    });
+    let category='';
+    const body=rows.map(row=>{
+      const heading=category===row.category?'':'<div class="section-title">'+escapeHtml(row.category)+'</div>';
+      category=row.category;
+      return heading+'<label class="shop"><input type="checkbox" data-item-ids="'+escapeHtml(row.items.map(i=>i.id).join(','))+'"'+(row.items.every(i=>i.checked)?' checked':'')+'>'+
+        '<span class="name">'+escapeHtml(row.name)+'</span><span class="qty">'+escapeHtml(combineShoppingQuantities(row.items))+'</span>'+
+        (row.items[0].is_manual?'<span class="manual-delete" data-item-id="'+escapeHtml(row.items[0].id)+'" title="Ta bort">×</span>':'')+'</label>';
+    }).join('');
+    list.innerHTML='<div class="shopping-tools"><div class="shopping-tools-top"><strong class="shopping-progress-text"></strong><button type="button" class="toggle-checked-btn">Dölj klara</button></div><div class="shopping-mini-track"><div class="shopping-progress-bar"></div></div></div>'+ (body||'<div class="empty-copy">Inköpslistan är tom.</div>');
+    list.querySelector('.toggle-checked-btn')?.addEventListener('click',e=>{
+      const card=document.getElementById(cardId);
+      card?.classList.toggle('hide-checked');
+      e.currentTarget.textContent=card?.classList.contains('hide-checked')?'Visa klara':'Dölj klara';
+    });
+    updateListProgress(list);
+  }
+
+  function updateListProgress(list) {
+    const items=[...list.querySelectorAll('.shop input[type="checkbox"]')];
+    const done=items.filter(i=>i.checked).length;
+    list.querySelector('.shopping-progress-text').textContent=done+' av '+items.length+' klara';
+    list.querySelector('.shopping-progress-bar').style.width=(items.length?done/items.length*100:0)+'%';
+  }
+
   function refreshShoppingProgress() {
     const items = [...document.querySelectorAll('#shoppingList .shop input[type="checkbox"]')];
     const done = items.filter(cb => cb.checked).length;
@@ -536,13 +607,8 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
   }
 
   function refreshShoppingProgress() {
-    const items=[...document.querySelectorAll('#shoppingList .shop input[type="checkbox"]')];
-    const done=items.filter(cb=>cb.checked).length;
-    const total=items.length;
-    const text=document.getElementById('shoppingProgressText');
-    const bar=document.getElementById('shoppingProgressBar');
-    if(text) text.textContent=done+' av '+total+' klara';
-    if(bar) bar.style.width=(total?(done/total)*100:0)+'%';
+    const list=document.getElementById('shoppingList');
+    if(list?.querySelector('.shopping-progress-text')) updateListProgress(list);
   }
 
   function formatNextMealLabel(dateString) {
@@ -591,23 +657,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 
     const shoppingList=document.getElementById('shoppingList');
     if(shoppingList) {
-      const grouped={};
-      (shopping||[]).forEach(item=>{(grouped[item.category||'Övrigt'] ||= []).push(item);});
-      const groups=Object.entries(grouped).map(([category,items])=>
-        '<div class="section-title">'+escapeHtml(category)+'</div>'+
-        items.map(item=>'<label class="shop"><input type="checkbox" data-item-id="'+escapeHtml(item.id)+'"'+(item.checked?' checked':'')+'>'+
-          '<span class="name">'+escapeHtml(item.name)+'</span><span class="qty">'+escapeHtml(item.quantity||'')+'</span>'+
-          (item.is_manual?'<span class="manual-delete" data-item-id="'+escapeHtml(item.id)+'" title="Ta bort">×</span>':'')+
-          '</label>').join('')
-      ).join('');
-      shoppingList.innerHTML='<div class="shopping-tools"><div class="shopping-tools-top"><strong id="shoppingProgressText">0 av 0 klara</strong>'+
-        '<button type="button" id="toggleCheckedBtn">Dölj klara</button></div><div class="shopping-mini-track"><div id="shoppingProgressBar"></div></div></div>'+
-        (groups||'<div class="empty-copy">Inköpslistan är tom.</div>');
-      document.getElementById('toggleCheckedBtn')?.addEventListener('click',e=>{
-        document.getElementById('shoppingCard')?.classList.toggle('hide-checked');
-        e.currentTarget.textContent=document.getElementById('shoppingCard')?.classList.contains('hide-checked')?'Visa klara':'Dölj klara';
-      });
-      refreshShoppingProgress();
+      renderShoppingList('shoppingList', shopping, 'shoppingCard');
     }
 
     const todayIso=new Date().toLocaleDateString('sv-SE');
@@ -760,36 +810,6 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(date) date.textContent = weekLabel;
     if(badge) badge.textContent = mealCount ? 'Planerad' : 'Ej planerad';
     if(text) text.textContent = '';
-
-    if(storeEl) {
-      const comp=week.store_comparison || {};
-      const ica=comp.ica || null;
-      const willys=comp.willys || null;
-      if(ica || willys) {
-        const vals=[ica,willys].filter(Boolean).map(x=>Number(x.total||0)).filter(n=>n>0);
-        const best=vals.length?Math.min(...vals):null;
-        const card=(label,obj)=>{
-          if(!obj) return '';
-          const total=Number(obj.total||0);
-          const bestClass=best && total===best?' best':'';
-          return '<div class="store-card'+bestClass+'"><div><strong>'+escapeHtml(label)+'</strong>'+
-            (bestClass?'<small>Billigast denna vecka</small>':'')+
-            '</div><span>'+escapeHtml(fmt(total))+'</span></div>';
-        };
-        storeEl.innerHTML=card('ICA Kvantum',ica)+card('Willys',willys);
-      } else {
-        storeEl.innerHTML='';
-      }
-    }
-
-    if(offersEl) {
-      const offers=Array.isArray(week.offers)?week.offers:[];
-      offersEl.innerHTML=offers.length ? offers.map(o =>
-        '<div class="offer-row"><div><strong>'+escapeHtml(o.title||o.name||'Erbjudande')+'</strong>'+
-        ((o.source||o.note)?'<small>'+escapeHtml([o.source,o.note].filter(Boolean).join(' · '))+'</small>':'')+
-        '</div><div class="offer-price">'+escapeHtml(o.price||'')+'</div></div>'
-      ).join('') : '';
-    }
 
     if(list) list.innerHTML = renderMealCards(plannedMealsCache);
 
@@ -987,6 +1007,14 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
       plannedMeals = nextMealsResult.data || [];
     }
     renderNextWeek(plannedWeek, plannedMeals);
+    if(plannedWeekId) {
+      const {data:nextShopping,error:nextShoppingError}=await sb.from('shopping_items')
+        .select('id,category,name,quantity,checked,sort_order,source_meal_id,is_manual')
+        .eq('week_id',plannedWeekId).order('sort_order',{ascending:true});
+      const skipped=new Set(plannedMeals.filter(m=>m.status==='skipped').map(m=>m.id));
+      if(nextShoppingError) document.getElementById('nextShoppingList').textContent='Kunde inte läsa inköpslistan. Försök igen.';
+      else renderShoppingList('nextShoppingList',(nextShopping||[]).filter(i=>!skipped.has(i.source_meal_id)),'nextShoppingCard');
+    } else renderShoppingList('nextShoppingList',[],'nextShoppingCard');
     await renderHistory(refreshedWeeks || weeks || [], expenses || []);
 
     refreshDashboard();
@@ -1331,7 +1359,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(btn) deleteMealRule(Number(btn.dataset.ruleIndex));
   });
 
-  document.getElementById('shoppingList')?.addEventListener('click', async e => {
+  document.querySelector('main')?.addEventListener('click', async e => {
     const del=e.target.closest('.manual-delete');
     if(!del) return;
     e.preventDefault();
@@ -1342,13 +1370,13 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     if(sessionData.session?.user) await loadData(sessionData.session.user.id);
   });
 
-  document.getElementById('shoppingList')?.addEventListener('change', async e => {
+  document.querySelector('main')?.addEventListener('change', async e => {
     if(!e.target.matches('.shop input[type="checkbox"]')) return;
-    const id = e.target.dataset.itemId;
-    if(!id) return;
-    refreshShoppingProgress();
+    const ids=(e.target.dataset.itemIds||'').split(',').filter(Boolean);
+    if(!ids.length) return;
+    updateListProgress(e.target.closest('#shoppingList, #nextShoppingList'));
     document.getElementById('syncText').textContent = 'Sparar…';
-    const { error } = await sb.from('shopping_items').update({checked:e.target.checked}).eq('id',id);
+    const { error } = await sb.from('shopping_items').update({checked:e.target.checked}).in('id',ids);
     document.getElementById('syncText').textContent = error ? 'Kunde inte spara' : 'Synkad';
   });
 
@@ -1360,7 +1388,7 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     .on('postgres_changes', { event:'*', schema:'public', table:'shopping_items' }, async payload => {
       if(!activeWeekId) return;
       const row = payload.new?.id ? payload.new : payload.old;
-      if(row?.week_id && row.week_id !== activeWeekId) return;
+      if(row?.week_id && row.week_id !== activeWeekId && row.week_id !== plannedWeekId) return;
       const { data: sessionData } = await sb.auth.getSession();
       if(sessionData.session?.user) await loadData(sessionData.session.user.id);
     })
@@ -1408,9 +1436,12 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
     const btn = document.getElementById('shoppingModeBtn');
     if(btn) btn.addEventListener('click', () => {
       document.body.classList.toggle('shopping-mode');
+      document.body.classList.toggle('shopping-next', document.body.classList.contains('shopping-mode') && plannedMealsCache.length>0);
       btn.textContent = document.body.classList.contains('shopping-mode') ? 'Klar' : 'Handla';
       if(document.body.classList.contains('shopping-mode')) {
-        document.getElementById('shoppingCard')?.scrollIntoView({behavior:'smooth', block:'start'});
+        const next=document.body.classList.contains('shopping-next');
+        if(next) document.querySelector('#nextWeek .compact-fold').open=true;
+        document.getElementById(next?'nextShoppingCard':'shoppingCard')?.scrollIntoView({behavior:'smooth', block:'start'});
       }
     });
   }
