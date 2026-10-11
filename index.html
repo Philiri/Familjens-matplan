@@ -256,8 +256,19 @@ body.shopping-mode #shoppingList{display:block!important}
 .day.past-day{background:#f7f7f7}
 .day.past-day .meal{text-decoration:line-through;color:#747b7d}
 .day.past-day .weekday,.day.past-day .ingredients{color:#747b7d}
+.view-switch{display:flex;gap:8px;margin-bottom:10px}.view-switch button{flex:1;border:1px solid #ffffff55;background:transparent;color:#fff;padding:10px;font:inherit;font-weight:750;border-radius:12px;cursor:pointer}.view-switch button[aria-pressed="true"]{background:#fff;color:#203040}
+.week,.home-panel,.shopping-panel{scroll-margin-top:165px}
+body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
+#financeView[hidden],#financeContent[hidden]{display:none!important}
+.finance-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.finance-heading h2{margin:4px 0;font-size:24px}.finance-heading label{font-size:12px;max-width:48%}
+#financeView input,#financeView select{display:block;max-width:100%;width:100%;min-width:0;border:1px solid #cfd7d1;background:#fff;color:#243038;border-radius:10px;padding:10px;font:inherit;font-size:16px;margin-top:5px}
+#financeView button{border:0;border-radius:10px;padding:10px 12px;background:#203040;color:white;font:inherit;font-size:14px;font-weight:700;cursor:pointer}#financeView button.secondary{background:#e9eeeb;color:#203040}#financeView button:disabled{opacity:.5;cursor:wait}
+#financeRefresh{margin:0 0 12px}#financeMetrics{margin-top:8px}.finance-fold{background:#fff;border-radius:16px;padding:14px;margin-bottom:12px}.finance-fold>summary{cursor:pointer;font-size:18px;font-weight:750}.finance-fold[open]>summary{margin-bottom:15px}.finance-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.finance-form label{font-size:13px;font-weight:650;min-width:0}.finance-wide{grid-column:1/-1}.finance-actions{display:flex;flex-wrap:wrap;gap:8px}.finance-filter{display:block;margin-bottom:12px;font-size:13px}
+.finance-group{border-top:1px solid #e7ebe7;padding-top:12px;margin-top:12px}.finance-group>summary{cursor:pointer;font-weight:750;display:flex;justify-content:space-between;gap:8px}.finance-group>summary span{font-size:12px;color:#6f777b;text-align:right}.finance-row{border-bottom:1px solid #eef1ee;padding:12px 0}.finance-row-head{display:flex;justify-content:space-between;gap:10px;align-items:start}.finance-row-head b{font-size:14px;overflow-wrap:anywhere}.finance-row small{color:#6f777b;display:block;margin:4px 0;line-height:1.4}.finance-values{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:7px;align-items:center}.finance-values label,.finance-values span{font-size:12px;color:#6f777b}.finance-values strong{font-size:16px;display:block;color:#243038;margin-top:5px}.finance-values input{max-width:130px}.finance-row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.finance-row-actions button{font-size:12px!important;padding:7px 10px!important}.finance-tx{padding:12px 0;border-top:1px solid #eef1ee}.finance-tx small{display:block;color:#6f777b;margin-top:4px}.finance-food{background:#eef3ee;border-radius:12px;padding:12px;margin-top:14px}.finance-food p{margin:6px 0;font-size:13px}.finance-warning{color:#a04435!important}.finance-values .finance-over{color:#b44235}.finance-values .finance-within{color:#42734b}.finance-values .finance-near{color:#90630e}
+@media(max-width:430px){.finance-heading h2{font-size:21px}.finance-form{grid-template-columns:1fr}.finance-wide{grid-column:auto}.finance-heading{align-items:start}#financeMetrics b{font-size:19px}}
+
 </style></head><body>
-<header id="top"><h1>Familjens matplan</h1><div class="nav">
+<header id="top"><h1 id="appTitle">Familjens matplan</h1><div class="view-switch" aria-label="Välj vy"><button type="button" id="foodViewButton" aria-pressed="true">Mat</button><button type="button" id="otherViewButton" aria-pressed="false">Övrigt</button></div><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
 </div></header><main>
 <section class="auth-panel" id="authPanel">
@@ -295,6 +306,7 @@ body.shopping-mode #shoppingList{display:block!important}
   </div>
 </section>
 
+<div id="foodView">
 <section class="home-panel locked" id="todayCard">
   <div class="home-eyebrow">AKTUELL VECKA</div>
   <div class="today-card">
@@ -468,6 +480,45 @@ body.shopping-mode #shoppingList{display:block!important}
       </div>
     </div>
   </details>
+</section>
+
+</div>
+<section class="week locked" id="financeView" hidden>
+  <div class="finance-heading"><div><span class="home-eyebrow">HELA HUSHÅLLET</span><h2>Månadens ekonomi</h2></div><label>Månad<input type="month" id="financeMonth" required></label></div>
+  <p class="budget-note">Mat ingår automatiskt i översikten. Budgeten är er plan, registrerat är det ni har fyllt i.</p>
+  <div id="financeStatus" class="save-status" aria-live="polite">Logga in för att visa hushållets ekonomi.</div>
+  <button type="button" id="financeRefresh" class="secondary">Uppdatera</button>
+  <div id="financeContent" hidden>
+    <div class="budget-grid" id="financeMetrics"></div>
+    <details class="finance-fold" open><summary>Månadsbudget och utfall</summary><div id="financeGroups"></div></details>
+    <details class="finance-fold" id="financeEntryFold"><summary id="financeEntryTitle">Lägg till en post</summary>
+      <form id="financeEntryForm" class="finance-form">
+        <input type="hidden" id="financeEntryId">
+        <label>Datum<input type="date" id="financeDate" required></label>
+        <label>Kategori<select id="financeCategory" required></select></label>
+        <label class="finance-wide">Beskrivning<input id="financeDescription" maxlength="200" required placeholder="T.ex. barnskor eller lön"></label>
+        <label>Belopp i kr<input id="financeAmount" type="number" step="0.01" inputmode="decimal" required></label>
+        <p class="budget-note">Ange ett positivt belopp. Använd minus för en återbetalning eller ett uttag från sparande. Mat registreras i Mat.</p>
+        <div class="finance-actions finance-wide"><button type="submit">Spara post</button><button type="button" id="financeCancel" class="secondary">Avbryt</button></div>
+      </form>
+    </details>
+    <details class="finance-fold" open><summary>Registrerade poster <span id="financeEntryCount"></span></summary>
+      <label class="finance-filter">Filtrera kategori<select id="financeFilter"><option value="">Alla kategorier</option></select></label>
+      <div id="financeTransactions"></div>
+    </details>
+    <details class="finance-fold" id="financeCategoryFold"><summary id="financeCategoryTitle">Hantera kategorier</summary>
+      <form id="financeCategoryForm" class="finance-form">
+        <input type="hidden" id="financeCategoryId">
+        <label class="finance-wide">Namn<input id="financeCategoryName" maxlength="120" required></label>
+        <label>Typ<select id="financeKind"><option value="variable">Rörlig kostnad</option><option value="fixed">Fast kostnad</option><option value="income">Inkomst</option><option value="saving">Sparande</option><option value="transfer">Överföring</option></select></label>
+        <label>Standardbudget per månad<input id="financeDefaultBudget" type="number" step="0.01" min="0" inputmode="decimal" value="0" required></label>
+        <label class="finance-wide">Anteckning<input id="financeNotes" maxlength="500"></label>
+        <p class="budget-note finance-wide">Standardbelopp används för månader som inte har en egen budget. En ändrad standard gäller även tidigare månader utan egen budget. Ändra månadens belopp i tabellen för att behålla övriga månader. Kategorins namn gäller alla månader.</p>
+        <div class="finance-actions finance-wide"><button type="submit">Spara kategori</button><button type="button" id="financeCategoryCancel" class="secondary">Ny kategori</button></div>
+      </form>
+    </details>
+    <p class="budget-note">Budgetens startbelopp kommer från er Excel-fil. Inga inkomster eller övriga betalningar är automatiskt bokförda. Överföringar mellan egna konton och betalning av kortfakturan räknas inte som nya kostnader.</p>
+  </div>
 </section>
 
 </main>
@@ -1615,10 +1666,15 @@ body.shopping-mode #shoppingList{display:block!important}
       document.getElementById('userEmail').textContent = session.user.email || '';
       setLocked(false);
       await loadData(session.user.id);
+      if(document.body.classList.contains("finance-mode")) await loadFinance();
     } else {
       loggedOut.classList.remove('hidden');
       loggedIn.classList.add('hidden');
       setLocked(true);
+      householdId=null;financeLoadVersion++;financeCategories=[];financeTransactions=[];financeFood=[];financeBudgets=[];
+      fe('financeContent').hidden=true;fe('financeMetrics').innerHTML='';fe('financeGroups').innerHTML='';fe('financeTransactions').innerHTML='';
+      financeEntryReset();financeCategoryReset();fe('financeCategory').innerHTML='';fe('financeFilter').innerHTML='';
+      fe('financeStatus').textContent='Logga in för att visa hushållets ekonomi.';
       if(status) status.textContent = 'Logga in med den användare som finns i Supabase Auth.';
     }
   }
@@ -1856,6 +1912,159 @@ body.shopping-mode #shoppingList{display:block!important}
     });
   }
 
+  const financeKinds={income:'Inkomster',fixed:'Fasta kostnader',variable:'Rörliga kostnader',saving:'Sparande',transfer:'Överföringar'};
+  let financeCategories=[], financeBudgets=[], financeTransactions=[], financeFood=[], financeBusy=false, financeLoadVersion=0;
+  const fe=id=>document.getElementById(id);
+  const financeMoney=n=>Number(n||0).toLocaleString('sv-SE',{maximumFractionDigits:2})+' kr';
+  const financeRound=n=>Math.round((n+Number.EPSILON)*100)/100;
+  function financeBudget(c){return Number(financeBudgets.find(b=>b.category_id===c.id)?.amount ?? c.default_budget);}
+  function financeTotals(categories,budgets,transactions,food,foodBudget){
+    const planned={income:0,fixed:0,variable:Number(foodBudget),saving:0,transfer:0};
+    const actual={income:0,fixed:0,variable:food.reduce((s,t)=>s+Number(t.amount),0),saving:0,transfer:0};
+    for(const c of categories) planned[c.kind]+=Number(budgets.find(b=>b.category_id===c.id)?.amount ?? c.default_budget);
+    for(const t of transactions){const c=categories.find(c=>c.id===t.category_id);if(c)actual[c.kind]+=Number(t.amount);}
+    return {planned,actual,plannedRemaining:financeRound(planned.income-planned.fixed-planned.variable-planned.saving),registeredRemaining:financeRound(actual.income-actual.fixed-actual.variable-actual.saving)};
+  }
+  function setFinanceView(view){
+    const other=view==='other';
+    document.body.classList.toggle('finance-mode',other);
+    document.body.classList.remove('shopping-mode','shopping-next');
+    syncShoppingView();
+    fe('financeView').hidden=!other;
+    fe('foodView').hidden=other;
+    fe('foodViewButton').setAttribute('aria-pressed',String(!other));
+    fe('otherViewButton').setAttribute('aria-pressed',String(other));
+    fe('appTitle').textContent=other?'Familjens ekonomi':'Familjens matplan';
+    window.scrollTo({top:0,behavior:'smooth'});
+    if(other && householdId)loadFinance();
+  }
+  async function financeFetchAll(table,columns,dateColumn,from,to){
+    let rows=[];
+    for(let offset=0;;offset+=500){
+      let q=sb.from(table).select(columns).eq('household_id',householdId).order('id').range(offset,offset+499);
+      if(dateColumn)q=q.gte(dateColumn,from).lt(dateColumn,to);
+      const {data,error}=await q;if(error)throw error;
+      rows.push(...data);if(data.length<500)return rows;
+    }
+  }
+  function financeMonthRange(month){const [year,m]=month.split('-').map(Number);return {from:month+'-01',to:(m===12?year+1:year)+'-'+String(m===12?1:m+1).padStart(2,'0')+'-01'};}
+  async function loadFinance(){
+    if(!householdId || financeBusy)return;
+    const version=++financeLoadVersion,month=fe('financeMonth').value;
+    if(!/^\d{4}-\d{2}$/.test(month))return;
+    fe('financeStatus').textContent='Hämtar månadens ekonomi…';
+    fe('financeContent').hidden=true;
+    const {from,to}=financeMonthRange(month);
+    try{
+      const [categories,budgets,transactions,food]=await Promise.all([
+        financeFetchAll('finance_categories','id,name,kind,default_budget,notes,sort_order'),
+        sb.from('finance_budgets').select('category_id,amount').eq('household_id',householdId).eq('month',from),
+        financeFetchAll('finance_transactions','id,category_id,transaction_date,description,amount','transaction_date',from,to),
+        financeFetchAll('expenses','id,expense_date,description,amount','expense_date',from,to)
+      ]);
+      if(version!==financeLoadVersion)return;
+      if(budgets.error)throw budgets.error;
+      financeCategories=categories.sort((a,b)=>a.sort_order-b.sort_order||a.name.localeCompare(b.name,'sv'));
+      financeBudgets=budgets.data||[];financeTransactions=transactions;financeFood=food;
+      renderFinance();fe('financeContent').hidden=false;
+      fe('financeStatus').textContent='Synkad med hushållet. Beloppen gäller vald månad.';
+    }catch(error){if(version!==financeLoadVersion)return;console.error(error);fe('financeStatus').textContent='Kunde inte hämta ekonomin. Tryck på Uppdatera för att försöka igen.';}
+  }
+  function renderFinance(){
+    const totals=financeTotals(financeCategories,financeBudgets,financeTransactions,financeFood,monthBudget);
+    const p=totals.planned,a=totals.actual;
+    fe('financeMetrics').innerHTML=[['Planerad inkomst',p.income],['Planerade kostnader inkl. mat',p.fixed+p.variable],['Planerat sparande',p.saving],['Kvar efter hela budgeten',totals.plannedRemaining],['Registrerade kostnader inkl. mat',a.fixed+a.variable],['Registrerat sparande',a.saving]].map(([label,value])=>'<div class="bigmetric"><span>'+label+'</span><b>'+financeMoney(value)+'</b></div>').join('')+'<div class="bigmetric full"><span>Registrerade inkomster</span><b>'+financeMoney(a.income)+'</b><small>Utfallet är bara komplett när alla månadens poster är registrerade.</small></div>';
+    const selected=fe('financeCategory').value,filter=fe('financeFilter').value;
+    const options=Object.entries(financeKinds).map(([kind,label])=>'<optgroup label="'+label+'">'+financeCategories.filter(c=>c.kind===kind).map(c=>'<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>').join('')+'</optgroup>').join('');
+    fe('financeCategory').innerHTML='<option value="">Välj kategori</option>'+options;
+    fe('financeFilter').innerHTML='<option value="">Alla kategorier</option>'+options;
+    fe('financeCategory').value=selected;fe('financeFilter').value=filter;
+    const openKinds=new Set([...fe('financeGroups').querySelectorAll('details[open]')].map(d=>d.dataset.kind));
+    fe('financeGroups').innerHTML=Object.entries(financeKinds).map(([kind,label])=>{
+      const cats=financeCategories.filter(c=>c.kind===kind);
+      return '<details class="finance-group" data-kind="'+kind+'" '+(openKinds.has(kind)?'open':'')+'><summary>'+label+'<span>'+financeMoney(a[kind])+' registrerat</span></summary>'+cats.map(c=>{
+        const tx=financeTransactions.filter(t=>t.category_id===c.id),actual=financeRound(tx.reduce((s,t)=>s+Number(t.amount),0)),budget=financeBudget(c);
+        return '<div class="finance-row"><div class="finance-row-head"><b>'+escapeHtml(c.name)+'</b></div>'+(c.notes?'<small>'+escapeHtml(c.notes)+'</small>':'')+'<div class="finance-values"><label>Budget denna månad<input aria-label="Budget för '+escapeHtml(c.name)+'" data-finance-budget="'+c.id+'" type="number" min="0" step="0.01" inputmode="decimal" value="'+budget+'"></label><span>Registrerat<strong class="'+((kind==='fixed'||kind==='variable')&&tx.length?'finance-'+budgetState(actual,budget):'')+'">'+(tx.length?financeMoney(actual):'Ej registrerat')+'</strong></span></div><div class="finance-row-actions"><button type="button" data-finance-add="'+c.id+'">Registrera</button><button type="button" class="secondary" data-finance-category="'+c.id+'">Ändra kategori</button></div></div>';
+      }).join('')+'</details>';
+    }).join('')+'<div class="finance-food"><b>Mat & dagligvaror</b><p>'+financeMoney(a.variable-financeTransactions.filter(t=>financeCategories.find(c=>c.id===t.category_id)?.kind==='variable').reduce((s,t)=>s+Number(t.amount),0))+' registrerat av '+financeMoney(monthBudget)+' i budget.</p><p>Hämtas automatiskt från Mat och räknas en gång i totalsumman.</p><button type="button" id="financeGoFood">Till matbudgeten</button></div>';
+    fe('financeGoFood').onclick=()=>{setFinanceView('food');fe('budgetOverview').open=true;fe('budget').scrollIntoView({behavior:'smooth'});};
+    renderFinanceTransactions();
+  }
+  function renderFinanceTransactions(){
+    const filter=fe('financeFilter').value;
+    const rows=financeTransactions.filter(t=>!filter||t.category_id===filter).sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.id.localeCompare(b.id));
+    fe('financeEntryCount').textContent='('+rows.length+')';
+    fe('financeTransactions').innerHTML=rows.length?rows.map(t=>'<div class="finance-tx"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Redigera</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga poster registrerade här för vald månad. Matköpen finns i Mat.</p>';
+  }
+  function financeEntryReset(){
+    fe('financeEntryForm').reset();fe('financeEntryId').value='';
+    fe('financeDate').value=stockholmToday().startsWith(fe('financeMonth').value)?stockholmToday():fe('financeMonth').value+'-01';
+    fe('financeEntryTitle').textContent='Lägg till en post';
+  }
+  function financeCategoryReset(){fe('financeCategoryForm').reset();fe('financeCategoryId').value='';fe('financeKind').disabled=false;fe('financeCategoryTitle').textContent='Hantera kategorier';}
+  async function financeWrite(action,after){
+    if(financeBusy||!householdId)return false;
+    financeBusy=true;financeLoadVersion++;
+    fe('financeMonth').disabled=true;
+    const controls=[...fe('financeContent').querySelectorAll('input,select,button')].map(el=>[el,el.disabled]);
+    controls.forEach(([el])=>el.disabled=true);
+    fe('financeStatus').textContent='Sparar…';
+    let success=false;
+    try{const result=await action();if(result.error)throw result.error;if(Array.isArray(result.data)&&!result.data.length)throw Error('Ingen rad sparades');success=true;}
+    catch(error){console.error(error);fe('financeStatus').textContent='Kunde inte spara. Ändringen är inte sparad, försök igen.';}
+    finally{financeBusy=false;fe('financeMonth').disabled=false;controls.forEach(([el,disabled])=>el.disabled=disabled);}
+    if(success){if(after)after();await loadFinance();}return success;
+  }
+  fe('financeMonth').value=stockholmToday().slice(0,7);
+  financeEntryReset();
+  fe('foodViewButton').onclick=()=>setFinanceView('food');
+  fe('otherViewButton').onclick=()=>setFinanceView('other');
+  fe('financeRefresh').onclick=loadFinance;
+  fe('financeMonth').onchange=()=>{if(!fe('financeMonth').checkValidity())return;financeEntryReset();loadFinance();};
+  fe('financeFilter').onchange=renderFinanceTransactions;
+  fe('financeCancel').onclick=()=>{financeEntryReset();fe('financeEntryFold').open=false;};
+  fe('financeCategoryCancel').onclick=financeCategoryReset;
+  fe('financeGroups').addEventListener('change',async e=>{
+    const id=e.target.dataset.financeBudget;if(!id)return;
+    const amount=Number(e.target.value);
+    if(!e.target.value||!e.target.checkValidity()||!Number.isFinite(amount)||amount<0){fe('financeStatus').textContent='Ange ett belopp från 0 kr.';return;}
+    const category=financeCategories.find(c=>c.id===id);
+    const previous=financeBudget(category);
+    const ok=await financeWrite(()=>sb.from('finance_budgets').upsert({household_id:householdId,category_id:id,month:fe('financeMonth').value+'-01',amount:financeRound(amount)},{onConflict:'household_id,category_id,month'}).select());
+    if(!ok)e.target.value=previous;
+  });
+  fe('financeView').addEventListener('click',e=>{
+    const button=e.target.closest('button');if(!button||financeBusy)return;
+    const add=button.dataset.financeAdd,edit=button.dataset.financeEdit,cat=button.dataset.financeCategory,del=button.dataset.financeDelete;
+    if(add||edit){
+      financeEntryReset();
+      if(edit){const t=financeTransactions.find(t=>t.id===edit);fe('financeEntryId').value=t.id;fe('financeDate').value=t.transaction_date;fe('financeCategory').value=t.category_id;fe('financeDescription').value=t.description;fe('financeAmount').value=t.amount;fe('financeEntryTitle').textContent='Redigera post';}
+      else {const c=financeCategories.find(c=>c.id===add);fe('financeCategory').value=c.id;if(c.kind!=='variable'){fe('financeDescription').value=c.name;fe('financeAmount').value=financeBudget(c)||'';}}
+      fe('financeEntryFold').open=true;fe('financeEntryFold').scrollIntoView({behavior:'smooth',block:'center'});fe('financeAmount').focus({preventScroll:true});
+    }
+    if(cat){const c=financeCategories.find(c=>c.id===cat);fe('financeCategoryId').value=c.id;fe('financeCategoryName').value=c.name;fe('financeKind').value=c.kind;fe('financeKind').disabled=true;fe('financeDefaultBudget').value=c.default_budget;fe('financeNotes').value=c.notes;fe('financeCategoryTitle').textContent='Ändra kategori';fe('financeCategoryFold').open=true;fe('financeCategoryFold').scrollIntoView({behavior:'smooth',block:'center'});}
+    if(del){const t=financeTransactions.find(t=>t.id===del);if(window.confirm('Ta bort ”'+t.description+'” på '+financeMoney(t.amount)+'?'))financeWrite(()=>sb.from('finance_transactions').delete().eq('household_id',householdId).eq('id',del).select(),()=>{if(fe('financeEntryId').value===del)financeEntryReset();});}
+  });
+  fe('financeEntryForm').addEventListener('submit',e=>{
+    e.preventDefault();if(!e.currentTarget.reportValidity())return;
+    const amount=financeRound(Number(fe('financeAmount').value));
+    if(!Number.isFinite(amount)||amount===0){fe('financeStatus').textContent='Ange ett belopp som inte är 0.';return;}
+    const id=fe('financeEntryId').value;
+    const payload={household_id:householdId,category_id:fe('financeCategory').value,transaction_date:fe('financeDate').value,description:fe('financeDescription').value.trim(),amount};
+    if(!payload.description)return;
+    // Keep the ID after a failed/ambiguous response so retry cannot duplicate this post.
+    const entryId=id||crypto.randomUUID();fe('financeEntryId').value=entryId;
+    financeWrite(()=>sb.from('finance_transactions').upsert({...payload,id:entryId}).select(),()=>{fe('financeMonth').value=payload.transaction_date.slice(0,7);financeEntryReset();fe('financeEntryFold').open=false;});
+  });
+  fe('financeCategoryForm').addEventListener('submit',e=>{
+    e.preventDefault();if(!e.currentTarget.reportValidity())return;
+    const id=fe('financeCategoryId').value,amount=Number(fe('financeDefaultBudget').value);
+    const payload={household_id:householdId,name:fe('financeCategoryName').value.trim(),default_budget:financeRound(amount),notes:fe('financeNotes').value.trim()};
+    if(!payload.name||!Number.isFinite(amount)||amount<0)return;
+    const newId=id||crypto.randomUUID();fe('financeCategoryId').value=newId;
+    financeWrite(()=>financeCategories.some(c=>c.id===id)?sb.from('finance_categories').update(payload).eq('household_id',householdId).eq('id',id).select():sb.from('finance_categories').upsert({...payload,id:newId,kind:fe('financeKind').value,sort_order:financeCategories.length}).select(),()=>{financeCategoryReset();fe('financeCategoryFold').open=false;});
+  });
+
   setupAppView();
   window.setInterval(refreshPastMealMarkers,60000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden) refreshPastMealMarkers();});
@@ -1870,3 +2079,4 @@ body.shopping-mode #shoppingList{display:block!important}
 </script>
 
 </body></html>
+
