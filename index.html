@@ -225,7 +225,8 @@ body.shopping-mode.shopping-next #v1{display:none!important}
 body.shopping-mode.shopping-next #nextWeek{display:block!important}
 body.shopping-mode.shopping-next #nextWeek .compact-fold>summary{display:none}
 body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){display:none!important}
-#nextShoppingCard{box-shadow:none;padding:0;margin:14px 0 24px}
+#nextShoppingCard{display:none;box-shadow:none;padding:0;margin:14px 0 24px}
+body.shopping-mode.shopping-next #nextShoppingCard{display:block}
 #nextShoppingCard .qty{white-space:normal;text-align:right;max-width:140px}
 .weekly-savings{font-size:13px;line-height:1.45;color:#47604b;margin:4px 0 10px;font-weight:700}\n#offersCard .weekly-savings{margin:0}\n
 /* Week and month use independent budget states: amber from 80%, red above 100%. */
