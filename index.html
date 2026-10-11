@@ -227,7 +227,7 @@ body.shopping-mode.shopping-next #nextWeek .compact-fold>summary{display:none}
 body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){display:none!important}
 #nextShoppingCard{box-shadow:none;padding:0;margin:14px 0 24px}
 #nextShoppingCard .qty{white-space:normal;text-align:right;max-width:140px}
-</style></head><body>
+.weekly-savings{font-size:13px;line-height:1.45;color:#47604b;margin:4px 0 10px;font-weight:700}\n#offersCard .weekly-savings{margin:0}\n</style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
 </div></header><main>
@@ -314,8 +314,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       </div>
 
       <div class="card" id="offersCard">
-        <h2>Erbjudanden veckan bygger på</h2>
-        <div id="currentOffers"><div class="empty-copy">Inga erbjudanden sparade för den här veckan.</div></div>
+        <div class="weekly-savings" id="currentOffers" aria-live="polite">Veckans rabatt: ej beräknad</div>
       </div>
 
       <div class="card" id="favoritesCard">
@@ -353,7 +352,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
         <div class="next-top">
           <div>
             <h2 id="nextWeekTitle">Laddar nästa vecka…</h2>
-            <div class="week-date" id="nextWeekDate"></div>
+            <div class="weekly-savings" id="nextWeekSavings" aria-live="polite"></div>
           </div>
         </div>
         <p id="nextWeekText"></p>
@@ -584,15 +583,21 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     ).join('') : '<div class="empty-copy">Inga favoriter sparade ännu. Tryck på ☆ vid en middag.</div>';
   }
 
+  function weeklySavingsText(offers) {
+    const rows=Array.isArray(offers)?offers:[];
+    // savings_total is the saving for the purchased quantity, in SEK.
+    // Offer prices or differences between stores cannot establish a discount.
+    if(!rows.length || !rows.every(o =>
+      typeof o?.savings_total==='number' &&
+      Number.isFinite(o.savings_total) && o.savings_total>=0
+    )) return 'Veckans rabatt: ej beräknad';
+    const total=rows.reduce((sum,o)=>sum+o.savings_total,0);
+    return 'Veckans rabatt: '+fmt(total);
+  }
+
   function renderOffers(targetId, offers) {
     const el=document.getElementById(targetId);
-    if(!el) return;
-    const arr=Array.isArray(offers)?offers:[];
-    el.innerHTML=arr.length ? '<div class="offer-list">'+arr.map(o =>
-      '<div class="offer-row"><div><strong>'+escapeHtml(o.title || o.name || 'Erbjudande')+'</strong>'+
-      ((o.source||o.note)?'<small>'+escapeHtml([o.source,o.note].filter(Boolean).join(' · '))+'</small>':'')+
-      '</div><div class="offer-price">'+escapeHtml(o.price || '')+'</div></div>'
-    ).join('')+'</div>' : '<div class="empty-copy">Inga erbjudanden sparade för den här veckan.</div>';
+    if(el) el.textContent=weeklySavingsText(offers);
   }
 
   function renderExtraPurchases(extras) {
@@ -784,7 +789,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     plannedMealsCache=sortMealsByDate(meals);
     const title = document.getElementById('nextWeekTitle');
     const summary = document.getElementById('nextWeekSummary');
-    const date = document.getElementById('nextWeekDate');
+    const savings = document.getElementById('nextWeekSavings');
     const badge = document.getElementById('nextWeekBadge');
     const text = document.getElementById('nextWeekText');
     const list = document.getElementById('nextWeekMeals');
@@ -794,7 +799,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     if(!week) {
       if(title) title.textContent = 'Ingen vecka planerad ännu';
       if(summary) summary.textContent = 'Ingen vecka planerad ännu';
-      if(date) date.textContent = '';
+      if(savings) savings.textContent = '';
       if(badge) badge.textContent = 'Saknas';
       if(text) text.textContent = '';
       if(list) list.innerHTML = '';
@@ -807,7 +812,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     const weekLabel=formatWeekLabel(week.week_start);
     if(title) title.textContent = mealCount ? 'Planerad meny' : 'Planeras när erbjudandena är aktuella';
     if(summary) summary.textContent = weekLabel + ' · ' + (mealCount ? (mealCount + (mealCount===1?' middag':' middagar')) : 'ej planerad');
-    if(date) date.textContent = weekLabel;
+    if(savings) savings.textContent = weeklySavingsText(week.offers);
     if(badge) badge.textContent = mealCount ? 'Planerad' : 'Ej planerad';
     if(text) text.textContent = '';
 
