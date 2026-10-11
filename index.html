@@ -248,7 +248,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
 .advance-cost[open]>summary::after{transform:rotate(90deg)}
 .advance-cost-body{padding:0 12px 8px}.advance-cost-body .cost-row{border-top:1px solid #e7ebe7}
 .advance-cost-body .budget-note{margin:8px 0 0}
-</style></head><body>
+.day.past-day{background:#f7f7f7}\n.day.past-day .meal{text-decoration:line-through;color:#747b7d}\n.day.past-day .weekday,.day.past-day .ingredients{color:#747b7d}\n</style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
 </div></header><main>
@@ -903,6 +903,16 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       Number(a.sort_order || 0)-Number(b.sort_order || 0));
   }
 
+  function isPastMealDate(date) {
+    return Boolean(date) && String(date)<stockholmToday();
+  }
+
+  function refreshPastMealMarkers() {
+    document.querySelectorAll('.day[data-meal-date]').forEach(card=>{
+      card.classList.toggle('past-day',isPastMealDate(card.dataset.mealDate));
+    });
+  }
+
   function renderMealCards(meals) {
     return sortMealsByDate(meals).map((meal,i)=>{
         const date=meal.meal_date?new Date(meal.meal_date+'T12:00:00'):null;
@@ -911,7 +921,8 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
         const steps=Array.isArray(meal.recipe)?meal.recipe:[];
         const fav=isFavorite(meal.title);
         const skipped=meal.status==='skipped';
-        return '<div class="day'+(skipped?' skipped':'')+'" data-meal-id="'+escapeHtml(meal.id)+'" data-meal-date="'+escapeHtml(meal.meal_date||'')+'">'+
+        const past=isPastMealDate(meal.meal_date);
+        return '<div class="day'+(skipped?' skipped':'')+(past?' past-day':'')+'" data-meal-id="'+escapeHtml(meal.id)+'" data-meal-date="'+escapeHtml(meal.meal_date||'')+'">'+
           '<div class="weekday">'+escapeHtml(dayName)+'</div>'+
           '<div class="meal-title-row"><div class="meal">'+escapeHtml(meal.title)+'</div>'+
           '<button type="button" class="meal-fav-btn'+(fav?' saved':'')+'" data-meal-id="'+escapeHtml(meal.id)+'" aria-label="Favorit">'+(fav?'★':'☆')+'</button></div>'+
@@ -1818,6 +1829,8 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
   }
 
   setupAppView();
+  window.setInterval(refreshPastMealMarkers,60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden) refreshPastMealMarkers();});
 
   sb.auth.getSession().then(({data})=>handleSession(data.session));
   sb.auth.onAuthStateChange((event, session)=>{
