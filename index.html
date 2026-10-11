@@ -310,9 +310,8 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     <div class="section-title">Månadskostnader</div>
     <div class="cost-row">
       <label for="monthlyMinceCost">Köttfärs<small>Köps separat i storpack. Räknas en gång per månad.</small></label>
-      <input inputmode="decimal" type="number" min="0" step="1" id="monthlyMinceCost" placeholder="Ange kostnad">
+      <input inputmode="decimal" type="number" min="0" step="1" id="monthlyMinceCost" placeholder="0 kr">
     </div>
-    <div class="savebar"><button type="button" id="saveMonthlyMinceBtn">Spara månadskostnad</button></div>
     <div class="save-status" id="monthlyMinceStatus" aria-live="polite"></div>
 
     <div class="section-title">Aktuell vecka</div>
@@ -470,6 +469,10 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
   let saveTimer = null;
   let monthlyMinceExpenseId = null;
   let monthlyMinceSavedAmount = 0;
+  let monthlyMinceTimer = null;
+  let monthlyMinceDirty = false;
+  let monthlyMinceSaving = false;
+  let monthlyMinceRevision = 0;
   const MINCE_EXPENSE_DESCRIPTION = 'Köttfärs – månadskostnad';
 
   const fmt = n => Math.round(Number(n || 0)).toLocaleString('sv-SE') + ' kr';
@@ -511,7 +514,9 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     const weeklyShop=readNum('cost1');
     const extras=currentExtraExpenses.reduce((sum,e)=>sum+Number(e.amount||0),0);
     const currentWeek=weeklyShop+extras;
-    const remain=monthBudget-monthSpent;
+    const draft=currentMonthlyMinceDraft();
+    const displayedMonthSpent=monthSpent+(monthlyMinceDirty && draft!==null ? draft-monthlyMinceSavedAmount : 0);
+    const remain=monthBudget-displayedMonthSpent;
 
     const monthMetric=document.getElementById('monthBudgetMetric');
     const targetMetric=document.getElementById('weekTargetMetric');
@@ -520,14 +525,14 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     const currentEl=document.getElementById('currentWeekTotal');
     if(monthMetric) monthMetric.textContent=fmt(monthBudget);
     if(targetMetric) targetMetric.textContent=fmt(weeklyTarget);
-    if(spentEl) spentEl.textContent=fmt(monthSpent);
+    if(spentEl) spentEl.textContent=fmt(displayedMonthSpent);
     if(remainEl) remainEl.textContent=fmt(remain);
     if(currentEl) currentEl.textContent=fmt(currentWeek);
 
     const progress=document.getElementById('budgetProgressBar');
     const progressAmount=document.getElementById('progressAmount');
     const progressFoot=document.getElementById('progressFoot');
-    if(progress) progress.style.width=(monthBudget>0?Math.max(0,Math.min(100,(monthSpent/monthBudget)*100)):monthSpent>0?100:0)+'%';
+    if(progress) progress.style.width=(monthBudget>0?Math.max(0,Math.min(100,(displayedMonthSpent/monthBudget)*100)):displayedMonthSpent>0?100:0)+'%';
     if(progressAmount) progressAmount.textContent=fmt(monthSpent).replace(' kr','')+' / '+fmt(monthBudget);
     if(progressFoot) progressFoot.textContent=remain>=0?fmt(remain)+' kvar':fmt(Math.abs(remain))+' över månadsbudgeten';
 
@@ -542,7 +547,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     const summary=document.getElementById('weekCostSummary1');
     if(summary) summary.textContent=fmt(currentWeek);
     const weekState=budgetState(currentWeek,weeklyTarget);
-    const monthState=budgetState(monthSpent,monthBudget);
+    const monthState=budgetState(displayedMonthSpent,monthBudget);
     [status,summary?.closest('.week-cost'),currentEl?.closest('.bigmetric')].forEach(el=>setBudgetState(el,weekState));
     [progress,progressAmount,progressFoot,spentEl?.closest('.bigmetric'),remainEl?.closest('.bigmetric')].forEach(el=>setBudgetState(el,monthState));
   }
@@ -579,31 +584,54 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     return row;
   }
 
-  async function saveMonthlyMinceCost() {
-    if(!householdId || !monthlyMinceExpenseId) return;
+  function currentMonthlyMinceDraft() {
     const input=document.getElementById('monthlyMinceCost');
+    if(!input || input.validity?.badInput) return null;
+    const amount=input.value.trim()===''?0:Number(input.value);
+    return Number.isFinite(amount) && amount>=0 ? amount : null;
+  }
+
+  function scheduleMonthlyMinceSave() {
+    clearTimeout(monthlyMinceTimer);
+    monthlyMinceDirty=true;
+    monthlyMinceRevision++;
+    const amount=currentMonthlyMinceDraft();
+    document.getElementById('monthlyMinceStatus').textContent=amount===null?'Ange ett belopp på 0 kr eller mer.':'Sparar automatiskt…';
+    refreshDashboard();
+    if(amount!==null) monthlyMinceTimer=setTimeout(saveMonthlyMinceCost,400);
+  }
+
+  async function saveMonthlyMinceCost() {
+    clearTimeout(monthlyMinceTimer);
+    if(!householdId || !monthlyMinceExpenseId || !monthlyMinceDirty || monthlyMinceSaving) return;
+    const amount=currentMonthlyMinceDraft();
+    if(amount===null) return;
+    const revision=monthlyMinceRevision;
+    const expenseId=monthlyMinceExpenseId;
     const status=document.getElementById('monthlyMinceStatus');
-    const button=document.getElementById('saveMonthlyMinceBtn');
-    const amount=Number(input.value);
-    if(!input.value.trim() || !Number.isFinite(amount) || amount<0) {
-      status.textContent='Ange ett belopp på 0 kr eller mer.';
-      return;
-    }
-    button.disabled=true;
+    monthlyMinceSaving=true;
     status.textContent='Sparar…';
     try {
       const {data,error}=await sb.from('expenses').update({amount})
-        .eq('id',monthlyMinceExpenseId).eq('household_id',householdId)
+        .eq('id',expenseId).eq('household_id',householdId)
         .select('id,amount').single();
       if(error) throw error;
-      monthSpent+=Number(data.amount)-monthlyMinceSavedAmount;
-      monthlyMinceSavedAmount=Number(data.amount);
-      refreshDashboard();
-      status.textContent='Sparad för denna månad: '+fmt(data.amount);
+      if(expenseId===monthlyMinceExpenseId) {
+        monthSpent+=Number(data.amount)-monthlyMinceSavedAmount;
+        monthlyMinceSavedAmount=Number(data.amount);
+        monthlyMinceDirty=revision!==monthlyMinceRevision;
+        refreshDashboard();
+        status.textContent=monthlyMinceDirty?'Sparar automatiskt…':'Sparat';
+      }
     } catch(error) {
       console.error(error);
-      status.textContent='Kunde inte spara. Försök igen.';
-    } finally { button.disabled=false; }
+      status.textContent='Kunde inte spara. Ändra beloppet eller lämna fältet för att försöka igen.';
+    } finally {
+      monthlyMinceSaving=false;
+      if(monthlyMinceDirty && revision!==monthlyMinceRevision) {
+        monthlyMinceTimer=setTimeout(saveMonthlyMinceCost,400);
+      }
+    }
   }
 
   function shoppingName(item) {
@@ -1080,12 +1108,12 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       const monthlyMince=await ensureMonthlyMinceExpense(allExpenses,monthStart);
       monthlyMinceExpenseId=monthlyMince.id;
       monthlyMinceSavedAmount=Number(monthlyMince.amount);
-      document.getElementById('monthlyMinceCost').value=monthlyMinceSavedAmount || '';
-      document.getElementById('saveMonthlyMinceBtn').disabled=false;
+      if(!monthlyMinceDirty && !monthlyMinceSaving) document.getElementById('monthlyMinceCost').value=monthlyMinceSavedAmount || '';
+      document.getElementById('monthlyMinceCost').disabled=false;
     } catch(error) {
       console.error(error);
       monthlyMinceExpenseId=null;
-      document.getElementById('saveMonthlyMinceBtn').disabled=true;
+      document.getElementById('monthlyMinceCost').disabled=true;
       document.getElementById('monthlyMinceStatus').textContent='Kunde inte läsa månadskostnaden. Ladda om sidan.';
     }
     monthSpent = allExpenses
@@ -1518,7 +1546,8 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     await handleSession(null);
   });
 
-  document.getElementById('saveMonthlyMinceBtn')?.addEventListener('click',saveMonthlyMinceCost);
+  document.getElementById('monthlyMinceCost')?.addEventListener('input',scheduleMonthlyMinceSave);
+  document.getElementById('monthlyMinceCost')?.addEventListener('blur',saveMonthlyMinceCost);
   document.getElementById('monthlyMinceCost')?.addEventListener('keydown',e=>{if(e.key==='Enter') saveMonthlyMinceCost();});
   document.getElementById('cost1')?.addEventListener('input', scheduleSave);
   document.getElementById('addExtraBtn')?.addEventListener('click', addExtraPurchase);
