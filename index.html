@@ -252,8 +252,22 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     </div>
     <div class="auth-actions">
       <button type="button" id="loginBtn">Logga in</button>
+      <button type="button" class="secondary" id="requestPasswordBtn">Skapa eller återställ lösenord</button>
     </div>
-    <div class="auth-status" id="authStatus">Logga in med den användare som finns i Supabase Auth.</div>
+    <div class="auth-status" id="authStatus">Logga in, eller ange din e-post och välj ”Skapa eller återställ lösenord”.</div>
+  </div>
+  <div id="passwordSetup" class="hidden">
+    <h2>Välj ditt lösenord</h2>
+    <p class="auth-status" id="passwordSetupAccount"></p>
+    <div class="auth-grid">
+      <input id="newPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Nytt lösenord, minst 8 tecken" aria-label="Nytt lösenord">
+      <input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Upprepa lösenordet" aria-label="Upprepa lösenordet">
+    </div>
+    <div class="auth-actions">
+      <button type="button" id="savePasswordBtn">Spara lösenord</button>
+      <button type="button" class="secondary" id="cancelPasswordBtn">Avbryt</button>
+    </div>
+    <div class="auth-status" id="passwordSetupStatus" aria-live="polite"></div>
   </div>
   <div id="loggedIn" class="hidden">
     <div class="sync-badge"><span class="sync-dot"></span><span id="syncText">Synkad</span></div>
@@ -435,6 +449,9 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
 (() => {
   const SUPABASE_URL = 'https://lxnljdtkqnwczkfrksth.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_YqiuT3CUN0zaEUTv2TR7Dg_XOcd1g_v';
+  const callbackParams=new URLSearchParams(window.location.hash.slice(1));
+  let passwordRecovery=callbackParams.get('type')==='recovery';
+  const recoveryError=callbackParams.get('error_description');
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   let householdId = null;
   let activeWeekId = null;
@@ -1396,6 +1413,16 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     const loggedIn = document.getElementById('loggedIn');
     const status = document.getElementById('authStatus');
 
+    const passwordSetup=document.getElementById('passwordSetup');
+    if(passwordRecovery && session?.user) {
+      loggedOut.classList.add('hidden');
+      loggedIn.classList.add('hidden');
+      passwordSetup.classList.remove('hidden');
+      document.getElementById('passwordSetupAccount').textContent='Välj ett lösenord för '+session.user.email;
+      setLocked(true);
+      return;
+    }
+    passwordSetup.classList.add('hidden');
     if(session?.user) {
       loggedOut.classList.add('hidden');
       loggedIn.classList.remove('hidden');
@@ -1409,6 +1436,67 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       if(status) status.textContent = 'Logga in med den användare som finns i Supabase Auth.';
     }
   }
+
+  async function requestPasswordLink() {
+    const emailInput=document.getElementById('loginEmail');
+    const email=emailInput.value.trim();
+    const status=document.getElementById('authStatus');
+    const button=document.getElementById('requestPasswordBtn');
+    if(!email || !emailInput.checkValidity()) {
+      status.textContent='Ange den e-postadress som ditt konto använder.';
+      return;
+    }
+    button.disabled=true;
+    status.textContent='Begär en lösenordslänk…';
+    try {
+      const {error}=await sb.auth.resetPasswordForEmail(email,{
+        redirectTo:window.location.origin+window.location.pathname
+      });
+      if(error) throw error;
+      status.textContent='Om adressen har ett konto skickas en länk till din mejl. Öppna den för att välja lösenord. Kontrollera även skräpposten.';
+    } catch(error) {
+      console.error(error);
+      status.textContent=error.status===429?'För många försök. Vänta en stund innan du begär en ny länk.':'Kunde inte skicka länken. Försök igen senare.';
+    } finally { button.disabled=false; }
+  }
+
+  async function saveNewPassword() {
+    const password=document.getElementById('newPassword').value;
+    const confirmation=document.getElementById('confirmPassword').value;
+    const status=document.getElementById('passwordSetupStatus');
+    const button=document.getElementById('savePasswordBtn');
+    if(password.length<8) { status.textContent='Välj ett lösenord med minst 8 tecken.'; return; }
+    if(password!==confirmation) { status.textContent='Lösenorden stämmer inte överens.'; return; }
+    button.disabled=true;
+    status.textContent='Sparar lösenord…';
+    try {
+      const {data:sessionData,error:sessionError}=await sb.auth.getSession();
+      if(sessionError || !passwordRecovery || !sessionData.session?.user) throw Error('Ingen giltig lösenordslänk');
+      const {error}=await sb.auth.updateUser({password});
+      if(error) throw error;
+      passwordRecovery=false;
+      document.getElementById('newPassword').value='';
+      document.getElementById('confirmPassword').value='';
+      window.history.replaceState(null,'',window.location.pathname+window.location.search);
+      await handleSession(sessionData.session);
+      document.getElementById('syncText').textContent='Lösenord sparat – inloggad';
+    } catch(error) {
+      console.error(error);
+      status.textContent='Kunde inte spara lösenordet. Kontrollera lösenordet eller begär en ny länk.';
+    } finally { button.disabled=false; }
+  }
+
+  document.getElementById('requestPasswordBtn')?.addEventListener('click',requestPasswordLink);
+  document.getElementById('savePasswordBtn')?.addEventListener('click',saveNewPassword);
+  document.getElementById('confirmPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter') saveNewPassword();});
+  document.getElementById('cancelPasswordBtn')?.addEventListener('click',async()=>{
+    passwordRecovery=false;
+    document.getElementById('newPassword').value='';
+    document.getElementById('confirmPassword').value='';
+    window.history.replaceState(null,'',window.location.pathname+window.location.search);
+    await sb.auth.signOut();
+    await handleSession(null);
+  });
 
   document.getElementById('loginBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value.trim();
@@ -1568,7 +1656,11 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
   setupAppView();
 
   sb.auth.getSession().then(({data})=>handleSession(data.session));
-  sb.auth.onAuthStateChange((_event, session)=>handleSession(session));
+  sb.auth.onAuthStateChange((event, session)=>{
+    if(event==='PASSWORD_RECOVERY') passwordRecovery=true;
+    // Run subsequent Auth calls outside the callback's internal lock.
+    window.setTimeout(()=>handleSession(session),0);
+  });
 })();
 </script>
 
