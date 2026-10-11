@@ -222,11 +222,11 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 #history .empty-copy{padding:8px 2px}
 
 body.shopping-mode.shopping-next #v1{display:none!important}
-body.shopping-mode.shopping-next #nextWeek{display:block!important}
-body.shopping-mode.shopping-next #nextWeek .compact-fold>summary{display:none}
-body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){display:none!important}
-#nextShoppingCard{display:none;box-shadow:none;padding:0;margin:14px 0 24px}
-body.shopping-mode.shopping-next #nextShoppingCard{display:block}
+body.shopping-mode.shopping-next #nextWeek{display:none!important}
+body.shopping-mode.shopping-next #nextShoppingPanel{display:block!important}
+.shopping-panel{display:none;scroll-margin-top:95px}
+#nextShoppingCard{background:#fff;border-radius:18px;padding:14px;margin:12px 0 24px}
+body.shopping-mode #shoppingList{display:block!important}
 #nextShoppingCard .qty{white-space:normal;text-align:right;max-width:140px}
 .weekly-savings{font-size:13px;line-height:1.45;color:#47604b;margin:4px 0 10px;font-weight:700}\n#offersCard .weekly-savings{margin:0}\n
 /* Week and month use independent budget states: amber from 80%, red above 100%. */
@@ -393,6 +393,9 @@ body.shopping-mode.shopping-next #nextShoppingCard{display:block}
     </div>
   </details>
 </section>
+<section class="shopping-panel locked" id="nextShoppingPanel">
+  <div class="shopping-card" id="nextShoppingCard"><h2>Nästa veckas inköpslista</h2><div id="nextShoppingList"></div><p class="budget-note">Kontrollera vad ni redan har hemma innan ni handlar.</p></div>
+</section>
 <section class="rolling-next locked compact-section" id="nextWeek">
   <details class="compact-fold" open>
     <summary>
@@ -411,7 +414,7 @@ body.shopping-mode.shopping-next #nextShoppingCard{display:block}
           </div>
         </div>
         <p id="nextWeekText"></p>
-        <div class="shopping-card" id="nextShoppingCard"><h2>Nästa veckas inköpslista</h2><div id="nextShoppingList"></div><p class="budget-note">Kontrollera vad ni redan har hemma innan ni handlar.</p></div><h2>Veckans middagar</h2>
+        <h2>Veckans middagar</h2>
         <div id="nextWeekMeals" class="next-meals"></div>
 
       </div>
@@ -508,7 +511,7 @@ body.shopping-mode.shopping-next #nextShoppingCard{display:block}
   const fmt = n => Math.round(Number(n || 0)).toLocaleString('sv-SE') + ' kr';
 
   function setLocked(locked) {
-    document.querySelectorAll('section.week, .home-panel, .rolling-next').forEach(el => el.classList.toggle('locked', locked));
+    document.querySelectorAll('section.week, .home-panel, .rolling-next, .shopping-panel').forEach(el => el.classList.toggle('locked', locked));
   }
 
   function readNum(id) {
@@ -1323,6 +1326,7 @@ body.shopping-mode.shopping-next #nextShoppingCard{display:block}
     await renderHistory(refreshedWeeks || weeks || [], expenses || []);
 
     refreshDashboard();
+    syncShoppingView();
     document.getElementById('syncText').textContent = 'Synkad';
   }
 
@@ -1813,18 +1817,30 @@ body.shopping-mode.shopping-next #nextShoppingCard{display:block}
     applyShoppingCardState();
   }
 
+  function syncShoppingView() {
+    const shopping=document.body.classList.contains('shopping-mode');
+    document.body.classList.toggle('shopping-next',shopping && Boolean(plannedWeekId));
+    const btn=document.getElementById('shoppingModeBtn');
+    if(btn) btn.textContent=shopping?'Klar':'Handla';
+    if(shopping && !plannedWeekId) {
+      const week=document.querySelector('#v1 .week-fold');
+      if(week) week.open=true;
+    }
+  }
+
   function setupAppView() {
     applyShoppingCardState();
     document.getElementById('toggleShoppingCardBtn')?.addEventListener('click', toggleShoppingCard);
-    const btn = document.getElementById('shoppingModeBtn');
-    if(btn) btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav a').forEach(link=>link.addEventListener('click',()=>{
+      document.body.classList.remove('shopping-mode','shopping-next');
+      syncShoppingView();
+    }));
+    const btn=document.getElementById('shoppingModeBtn');
+    if(btn) btn.addEventListener('click',()=>{
       document.body.classList.toggle('shopping-mode');
-      document.body.classList.toggle('shopping-next', document.body.classList.contains('shopping-mode') && plannedMealsCache.length>0);
-      btn.textContent = document.body.classList.contains('shopping-mode') ? 'Klar' : 'Handla';
+      syncShoppingView();
       if(document.body.classList.contains('shopping-mode')) {
-        const next=document.body.classList.contains('shopping-next');
-        if(next) document.querySelector('#nextWeek .compact-fold').open=true;
-        document.getElementById(next?'nextShoppingCard':'shoppingCard')?.scrollIntoView({behavior:'smooth', block:'start'});
+        document.getElementById(plannedWeekId?'nextShoppingPanel':'shoppingCard')?.scrollIntoView({behavior:'smooth',block:'start'});
       }
     });
   }
