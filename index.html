@@ -228,7 +228,9 @@ body.shopping-mode.shopping-next #nextShoppingPanel{display:block!important}
 #nextShoppingCard{background:#fff;border-radius:18px;padding:14px;margin:12px 0 24px}
 body.shopping-mode #shoppingList{display:block!important}
 #nextShoppingCard .qty{white-space:normal;text-align:right;max-width:140px}
-.weekly-savings{font-size:13px;line-height:1.45;color:#47604b;margin:4px 0 10px;font-weight:700}\n#offersCard .weekly-savings{margin:0}\n
+.weekly-savings{font-size:13px;line-height:1.45;color:#47604b;margin:4px 0 10px;font-weight:700}
+#offersCard .weekly-savings{margin:0}
+
 /* Week and month use independent budget states: amber from 80%, red above 100%. */
 .budget-within{--budget-color:#28623b;--budget-bg:#edf6ef}
 .budget-near{--budget-color:#8a5800;--budget-bg:#fff4d8}
@@ -249,7 +251,10 @@ body.shopping-mode #shoppingList{display:block!important}
 .advance-cost[open]>summary::after{transform:rotate(90deg)}
 .advance-cost-body{padding:0 12px 8px}.advance-cost-body .cost-row{border-top:1px solid #e7ebe7}
 .advance-cost-body .budget-note{margin:8px 0 0}
-.day.past-day{background:#f7f7f7}\n.day.past-day .meal{text-decoration:line-through;color:#747b7d}\n.day.past-day .weekday,.day.past-day .ingredients{color:#747b7d}\n</style></head><body>
+.day.past-day{background:#f7f7f7}
+.day.past-day .meal{text-decoration:line-through;color:#747b7d}
+.day.past-day .weekday,.day.past-day .ingredients{color:#747b7d}
+</style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
 </div></header><main>
@@ -670,7 +675,8 @@ body.shopping-mode #shoppingList{display:block!important}
   }
 
   function stockholmToday() {
-    return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Stockholm',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+    const parts=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Stockholm',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    return ['year','month','day'].map(type=>parts.find(p=>p.type===type).value).join('-');
   }
 
   function purchaseInCurrentMonth(date) {
