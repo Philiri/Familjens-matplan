@@ -1953,12 +1953,12 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     }
   }
   function financeMonthRange(month){const [year,m]=month.split('-').map(Number);return {from:month+'-01',to:(m===12?year+1:year)+'-'+String(m===12?1:m+1).padStart(2,'0')+'-01'};}
-  async function loadFinance(){
+  async function loadFinance(options={}){
     if(!householdId || financeBusy)return;
     const version=++financeLoadVersion,month=fe('financeMonth').value;
     if(!/^\d{4}-\d{2}$/.test(month))return;
     fe('financeStatus').textContent='Hämtar månadens ekonomi…';
-    fe('financeContent').hidden=true;
+    if(!options.keepVisible) fe('financeContent').hidden=true;
     const {from,to}=financeMonthRange(month);
     try{
       const [categories,budgets,transactions,food]=await Promise.all([
@@ -1991,7 +1991,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
       const cats=financeCategories.filter(c=>c.kind===kind);
       return '<details class="finance-group" data-kind="'+kind+'" '+((openKinds.has(kind)||(firstRender&&kind==='fixed'))?'open':'')+'><summary>'+label+'<span>'+financeMoney(a[kind])+' registrerat</span></summary>'+cats.map(c=>{
         const tx=financeTransactions.filter(t=>t.category_id===c.id),actual=financeRound(tx.reduce((s,t)=>s+Number(t.amount),0)),budget=financeBudget(c);
-        return '<div class="finance-row"><div class="finance-row-head"><b>'+escapeHtml(c.name)+'</b></div>'+(c.notes?'<small>'+escapeHtml(c.notes)+'</small>':'')+'<div class="finance-values"><label>Budget denna månad<input aria-label="Budget för '+escapeHtml(c.name)+'" data-finance-budget="'+c.id+'" '+(c.system_key==='food_statement'?'disabled title="Matbudgeten visas nedan"':'')+' type="number" min="0" step="0.01" inputmode="decimal" value="'+(c.system_key==='food_statement'?monthBudget:budget)+'"></label><span>Registrerat<strong class="'+((kind==='fixed'||kind==='variable')&&c.system_key!=='food_statement'&&tx.length?'finance-'+budgetState(actual,budget):'')+'">'+(tx.length?financeMoney(actual):'Ej registrerat')+'</strong></span></div><div class="finance-row-actions"><button type="button" data-finance-add="'+c.id+'">Registrera</button><button type="button" class="secondary" data-finance-category="'+c.id+'">Ändra kategori</button></div></div>';
+        return '<div class="finance-row" data-finance-position="category-'+c.id+'"><div class="finance-row-head"><b>'+escapeHtml(c.name)+'</b></div>'+(c.notes?'<small>'+escapeHtml(c.notes)+'</small>':'')+'<div class="finance-values"><label>Budget denna månad<input aria-label="Budget för '+escapeHtml(c.name)+'" data-finance-budget="'+c.id+'" '+(c.system_key==='food_statement'?'disabled title="Matbudgeten visas nedan"':'')+' type="number" min="0" step="0.01" inputmode="decimal" value="'+(c.system_key==='food_statement'?monthBudget:budget)+'"></label><span>Registrerat<strong class="'+((kind==='fixed'||kind==='variable')&&c.system_key!=='food_statement'&&tx.length?'finance-'+budgetState(actual,budget):'')+'">'+(tx.length?financeMoney(actual):'Ej registrerat')+'</strong></span></div><div class="finance-row-actions"><button type="button" data-finance-add="'+c.id+'">Registrera</button><button type="button" class="secondary" data-finance-category="'+c.id+'">Ändra kategori</button></div></div>';
       }).join('')+'</details>';
     }).join('')+'<div class="finance-food"><b>Mat & dagligvaror</b><p>'+financeMoney(financeFood.reduce((s,t)=>s+Number(t.amount),0)+financeTransactions.filter(t=>financeCategories.find(c=>c.id===t.category_id)?.system_key==='food_statement').reduce((s,t)=>s+Number(t.amount),0))+' registrerat av '+financeMoney(monthBudget)+' i budget.</p><p>Matköp från Mat och importerade kontoutdrag. Räknas en gång i totalsumman.</p><button type="button" id="financeGoFood">Till matbudgeten</button></div>';
     fe('financeGoFood').onclick=()=>{setFinanceView('food');fe('budgetOverview').open=true;fe('budget').scrollIntoView({behavior:'smooth'});};
@@ -2003,7 +2003,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const filter=fe('financeFilter').value;
     const rows=financeTransactions.filter(t=>!filter||t.category_id===filter).sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.id.localeCompare(b.id));
     fe('financeEntryCount').textContent='('+rows.length+')';
-    fe('financeTransactions').innerHTML=rows.length?rows.map(t=>'<div class="finance-tx"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Redigera</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga poster registrerade här för vald månad. Matköpen finns i Mat.</p>';
+    fe('financeTransactions').innerHTML=rows.length?rows.map(t=>'<div class="finance-tx" data-finance-position="transaction-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Redigera</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga poster registrerade här för vald månad. Matköpen finns i Mat.</p>';
   }
   function financeEntryReset(){
     fe('financeEntryForm').reset();fe('financeEntryId').value='';
@@ -2011,6 +2011,30 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     fe('financeEntryTitle').textContent='Lägg till en post';
   }
   function financeCategoryReset(){fe('financeCategoryForm').reset();fe('financeCategoryId').value='';fe('financeKind').disabled=false;fe('financeCategoryTitle').textContent='Hantera kategorier';}
+
+  let financeReturnPoint=null;
+  function captureFinancePosition(source,review=false){
+    const row=source?.closest('[data-finance-position]') ||
+      [...fe('financeContent').querySelectorAll('[data-finance-position]')].find(el=>el.getBoundingClientRect().bottom>document.querySelector('header').getBoundingClientRect().bottom);
+    const keys=[];
+    if(row){
+      if(!review)keys.push(row.dataset.financePosition);
+      if(row.nextElementSibling?.dataset.financePosition)keys.push(row.nextElementSibling.dataset.financePosition);
+      if(row.previousElementSibling?.dataset.financePosition)keys.push(row.previousElementSibling.dataset.financePosition);
+    }
+    return {keys,offset:row?.getBoundingClientRect().top??0,scroll:window.scrollY,review};
+  }
+  function restoreFinancePosition(point){
+    if(!point)return;
+    requestAnimationFrame(()=>{
+      if(!document.body.classList.contains('finance-mode'))return;
+      const target=point.keys.map(key=>document.querySelector('[data-finance-position="'+key+'"]')).find(Boolean);
+      if(target)window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-point.offset),behavior:'instant'});
+      else if(point.review)fe('financeGroups').scrollIntoView({block:'start',behavior:'instant'});
+      else window.scrollTo({top:point.scroll,behavior:'instant'});
+    });
+  }
+
   async function financeWrite(action,after){
     if(financeBusy||!householdId)return false;
     financeBusy=true;financeLoadVersion++;
@@ -2018,11 +2042,13 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const controls=[...fe('financeContent').querySelectorAll('input,select,button')].map(el=>[el,el.disabled]);
     controls.forEach(([el])=>el.disabled=true);
     fe('financeStatus').textContent='Sparar…';
+    const returnPoint=financeReturnPoint||captureFinancePosition();
+    const savedMonth=fe('financeMonth').value;
     let success=false;
     try{const result=await action();if(result.error)throw result.error;if(Array.isArray(result.data)&&!result.data.length)throw Error('Ingen rad sparades');success=true;}
     catch(error){console.error(error);fe('financeStatus').textContent='Kunde inte spara. Ändringen är inte sparad, försök igen.';}
     finally{financeBusy=false;fe('financeMonth').disabled=false;controls.forEach(([el,disabled])=>el.disabled=disabled);}
-    if(success){if(after)after();await loadFinance();}return success;
+    if(success){if(after)after();await loadFinance({keepVisible:true});if(savedMonth===fe('financeMonth').value) restoreFinancePosition(returnPoint);financeReturnPoint=null;}return success;
   }
   fe('financeMonth').value=stockholmToday().slice(0,7);
   financeEntryReset();
@@ -2031,8 +2057,8 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   fe('financeRefresh').onclick=loadFinance;
   fe('financeMonth').onchange=()=>{if(!fe('financeMonth').checkValidity())return;financeReviewLimit=20;financeEntryReset();loadFinance();};
   fe('financeFilter').onchange=renderFinanceTransactions;
-  fe('financeCancel').onclick=()=>{financeEntryReset();fe('financeEntryFold').open=false;};
-  fe('financeCategoryCancel').onclick=financeCategoryReset;
+  fe('financeCancel').onclick=()=>{financeEntryReset();fe('financeEntryFold').open=false;restoreFinancePosition(financeReturnPoint);financeReturnPoint=null;};
+  fe('financeCategoryCancel').onclick=()=>{financeCategoryReset();financeReturnPoint=null;};
   fe('financeGroups').addEventListener('change',async e=>{
     const id=e.target.dataset.financeBudget;if(!id)return;
     const amount=Number(e.target.value);
@@ -2046,12 +2072,13 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const button=e.target.closest('button');if(!button||financeBusy)return;
     const add=button.dataset.financeAdd,edit=button.dataset.financeEdit,cat=button.dataset.financeCategory,del=button.dataset.financeDelete;
     if(add||edit){
+      financeReturnPoint=captureFinancePosition(button,Boolean(edit&&financePending.some(t=>t.id===edit)));
       financeEntryReset();
       if(edit){const t=[...financeTransactions,...financePending].find(t=>t.id===edit);fe('financeEntryId').value=t.id;fe('financeDate').value=t.transaction_date;fe('financeCategory').value=t.category_id||'';fe('financeDescription').value=t.description;fe('financeAmount').value=t.amount;fe('financeEntryTitle').textContent=t.review_status==='pending'?'Kontrollera och bekräfta post':'Redigera post';}
       else {const c=financeCategories.find(c=>c.id===add);fe('financeCategory').value=c.id;if(c.kind!=='variable'){fe('financeDescription').value=c.name;fe('financeAmount').value=financeBudget(c)||'';}}
       fe('financeEntryFold').open=true;fe('financeEntryFold').scrollIntoView({behavior:'smooth',block:'center'});fe('financeAmount').focus({preventScroll:true});
     }
-    if(cat){const c=financeCategories.find(c=>c.id===cat);fe('financeCategoryId').value=c.id;fe('financeCategoryName').value=c.name;fe('financePlanOwner').value=c.plan_owner||'household';fe('financeKind').value=c.kind;fe('financeKind').disabled=true;fe('financeDefaultBudget').value=c.default_budget;fe('financeNotes').value=c.notes;fe('financeCategoryTitle').textContent='Ändra kategori';fe('financeCategoryFold').open=true;fe('financeCategoryFold').scrollIntoView({behavior:'smooth',block:'center'});}
+    if(cat){financeReturnPoint=captureFinancePosition(button);const c=financeCategories.find(c=>c.id===cat);fe('financeCategoryId').value=c.id;fe('financeCategoryName').value=c.name;fe('financePlanOwner').value=c.plan_owner||'household';fe('financeKind').value=c.kind;fe('financeKind').disabled=true;fe('financeDefaultBudget').value=c.default_budget;fe('financeNotes').value=c.notes;fe('financeCategoryTitle').textContent='Ändra kategori';fe('financeCategoryFold').open=true;fe('financeCategoryFold').scrollIntoView({behavior:'smooth',block:'center'});}
     if(del){const t=financeTransactions.find(t=>t.id===del);if(window.confirm('Ta bort ”'+t.description+'” på '+financeMoney(t.amount)+'?'))financeWrite(()=>sb.from('finance_transactions').delete().eq('household_id',householdId).eq('id',del).select(),()=>{if(fe('financeEntryId').value===del)financeEntryReset();});}
   });
   fe('financeEntryForm').addEventListener('submit',e=>{
@@ -2077,7 +2104,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   function renderFinanceReview(){
     fe('financeReviewFold').hidden=financePending.length===0;
     fe('financeReviewCount').textContent='('+financePending.length+')';
-    fe('financeReviewList').innerHTML=financePending.slice(0,financeReviewLimit).map(t=>'<div class="finance-tx"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(Number(t.source_out)||Number(t.source_in))+' '+(Number(t.source_in)>0?'in':'ut')+'</strong></div><small>'+escapeHtml(t.transaction_date)+'</small><small>'+escapeHtml(t.source_info)+'</small><div class="finance-row-actions"><button type="button" data-finance-edit="'+t.id+'">Kontrollera och kategorisera</button></div></div>').join('');
+    fe('financeReviewList').innerHTML=financePending.slice(0,financeReviewLimit).map(t=>'<div class="finance-tx" data-finance-position="transaction-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(Number(t.source_out)||Number(t.source_in))+' '+(Number(t.source_in)>0?'in':'ut')+'</strong></div><small>'+escapeHtml(t.transaction_date)+'</small><small>'+escapeHtml(t.source_info)+'</small><div class="finance-row-actions"><button type="button" data-finance-edit="'+t.id+'">Kontrollera och kategorisera</button></div></div>').join('');
     fe('financeMoreReview').hidden=financePending.length<=financeReviewLimit;
   }
   fe('financeMoreReview').onclick=()=>{financeReviewLimit+=20;renderFinanceReview();};
