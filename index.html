@@ -2120,7 +2120,6 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   function financeMerchantKey(description){
     const key=String(description||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('sv-SE');
     if(key.includes('GRAB'))return 'GRAB';
-    if(/^(SAVR|LÖN|LON|BETALNINGAR|INBETALNING|STÅENDE ÖVERF|ÖVERF|BANKBDR|BARNBDR|BARNBIDRAG)([ *]|$)/.test(key))return null;
     return key||null;
   }
   function refreshFinanceRuleChoice(reset){
@@ -2128,8 +2127,8 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const key=financeMerchantKey(row?.description);
     const category=financeCategories.find(c=>c.id===fe('financeCategory').value);
     fe('financeRuleChoice').hidden=!key;
-    if(reset)fe('financeApplySimilar').checked=Boolean(key);
-    fe('financeRuleChoiceText').textContent=key?'Använd samma kategori för andra '+key+'-poster i alla månader'+(category?.plan_owner && category.plan_owner!=='household'?' för samma person':'')+'.':'';
+    if(reset)fe('financeApplySimilar').checked=Boolean(key)&&! /^(SAVR|LÖN|LON|BETALNINGAR|INBETALNING|STÅENDE ÖVERF|ÖVERF|BANKBDR|BARNBDR|BARNBIDRAG)([ *]|$)/.test(key);
+    fe('financeRuleChoiceText').textContent=key?'Använd samma kategori för andra okategoriserade poster med '+(key==='GRAB'?'Grab i namnet':'namnet ”'+key+'”')+' i alla månader'+(category?.plan_owner && category.plan_owner!=='household'?' för samma person':'')+'.':'';
   }
   function renderFinanceRules(){
     fe('financeRulesList').innerHTML=financeRules.length?financeRules.map((r,i)=>'<div class="finance-tx"><b>'+escapeHtml(r.merchant_key)+'</b><small>'+escapeHtml(financeCategories.find(c=>c.id===r.category_id)?.name||'')+(r.scope_actor==='*'?'':' · '+escapeHtml(r.scope_actor))+'</small><button type="button" class="secondary" data-finance-remove-rule="'+i+'">Ta bort regel</button></div>').join(''):'<p class="budget-note">Inga regler sparade ännu. Regeln skapas när du sparar med kryssrutan för samma leverantör.</p>';
