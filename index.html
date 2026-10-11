@@ -293,6 +293,14 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       <div class="bigmetric full"><span>Aktuell vecka totalt</span><b id="currentWeekTotal">0 kr</b></div>
     </div>
 
+    <div class="section-title">Månadskostnader</div>
+    <div class="cost-row">
+      <label for="monthlyMinceCost">Köttfärs<small>Köps separat i storpack. Räknas en gång per månad.</small></label>
+      <input inputmode="decimal" type="number" min="0" step="1" id="monthlyMinceCost" value="600">
+    </div>
+    <div class="savebar"><button type="button" id="saveMonthlyMinceBtn">Spara månadskostnad</button></div>
+    <div class="save-status" id="monthlyMinceStatus" aria-live="polite"></div>
+
     <div class="section-title">Aktuell vecka</div>
 
     <div class="cost-row">
@@ -443,6 +451,9 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
   let householdMealRules = [];
   let plannedMealsCache = [];
   let saveTimer = null;
+  let monthlyMinceExpenseId = null;
+  let monthlyMinceSavedAmount = 600;
+  const MINCE_EXPENSE_DESCRIPTION = 'Köttfärs – månadskostnad';
 
   const fmt = n => Math.round(Number(n || 0)).toLocaleString('sv-SE') + ' kr';
 
@@ -519,6 +530,65 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     [progress,progressAmount,progressFoot,spentEl?.closest('.bigmetric'),remainEl?.closest('.bigmetric')].forEach(el=>setBudgetState(el,monthState));
   }
 
+  function currentMonthStart() {
+    const parts=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Stockholm',year:'numeric',month:'2-digit'}).formatToParts(new Date());
+    return parts.find(p=>p.type==='year').value+'-'+parts.find(p=>p.type==='month').value+'-01';
+  }
+
+  function isSeparateMince(name) {
+    return /(?:kött|nöt|bland|fläsk|kyckling|lamm|kalkon|vilt|älg|ren|gris|ox)[\s-]*färs|^\s*(?:\d+\s*(?:g|kg)\s+)?färs\b/i.test(String(name||''));
+  }
+
+  async function ensureMonthlyMinceExpense(expenses, monthStart) {
+    let row=expenses.find(e=>e.week_id===null && e.category==='extra' &&
+      e.description===MINCE_EXPENSE_DESCRIPTION && e.expense_date===monthStart);
+    if(row) return row;
+    const inserted=await sb.from('expenses').insert({
+      household_id:householdId,week_id:null,expense_date:monthStart,
+      category:'extra',description:MINCE_EXPENSE_DESCRIPTION,amount:600
+    }).select('id,week_id,expense_date,category,description,amount').single();
+    if(inserted.error && inserted.error.code!=='23505') throw inserted.error;
+    if(inserted.data) row=inserted.data;
+    else {
+      const result=await sb.from('expenses')
+        .select('id,week_id,expense_date,category,description,amount')
+        .eq('household_id',householdId).is('week_id',null)
+        .eq('category','extra').eq('description',MINCE_EXPENSE_DESCRIPTION)
+        .eq('expense_date',monthStart).single();
+      if(result.error) throw result.error;
+      row=result.data;
+    }
+    expenses.push(row);
+    return row;
+  }
+
+  async function saveMonthlyMinceCost() {
+    if(!householdId || !monthlyMinceExpenseId) return;
+    const input=document.getElementById('monthlyMinceCost');
+    const status=document.getElementById('monthlyMinceStatus');
+    const button=document.getElementById('saveMonthlyMinceBtn');
+    const amount=Number(input.value);
+    if(!input.value.trim() || !Number.isFinite(amount) || amount<0) {
+      status.textContent='Ange ett belopp på 0 kr eller mer.';
+      return;
+    }
+    button.disabled=true;
+    status.textContent='Sparar…';
+    try {
+      const {data,error}=await sb.from('expenses').update({amount})
+        .eq('id',monthlyMinceExpenseId).eq('household_id',householdId)
+        .select('id,amount').single();
+      if(error) throw error;
+      monthSpent+=Number(data.amount)-monthlyMinceSavedAmount;
+      monthlyMinceSavedAmount=Number(data.amount);
+      refreshDashboard();
+      status.textContent='Sparad för denna månad: '+fmt(data.amount);
+    } catch(error) {
+      console.error(error);
+      status.textContent='Kunde inte spara. Försök igen.';
+    } finally { button.disabled=false; }
+  }
+
   function shoppingName(item) {
     if(item.is_manual) return item.name;
     return /^ost(?:,| till|$)/i.test(item.name)?'Ost':item.name;
@@ -549,6 +619,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     if(!list) return;
     const grouped=new Map();
     for(const item of shopping||[]) {
+      if(isSeparateMince(item.name)) continue;
       const category=/fryst/i.test(item.name)?'Fryst':/havregryn/i.test(item.name)?'Skafferi':item.category||'Övrigt';
       const name=shoppingName(item);
       const key=category+'|'+name.toLocaleLowerCase('sv-SE')+(item.is_manual?'|'+item.id:'');
@@ -985,9 +1056,22 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       return;
     }
 
-    const now = new Date();
-    const monthPrefix = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-';
-    monthSpent = (expenses || [])
+    const monthStart=currentMonthStart();
+    const monthPrefix=monthStart.slice(0,7)+'-';
+    const allExpenses=expenses || [];
+    try {
+      const monthlyMince=await ensureMonthlyMinceExpense(allExpenses,monthStart);
+      monthlyMinceExpenseId=monthlyMince.id;
+      monthlyMinceSavedAmount=Number(monthlyMince.amount);
+      document.getElementById('monthlyMinceCost').value=monthlyMinceSavedAmount;
+      document.getElementById('saveMonthlyMinceBtn').disabled=false;
+    } catch(error) {
+      console.error(error);
+      monthlyMinceExpenseId=null;
+      document.getElementById('saveMonthlyMinceBtn').disabled=true;
+      document.getElementById('monthlyMinceStatus').textContent='Kunde inte läsa månadskostnaden. Ladda om sidan.';
+    }
+    monthSpent = allExpenses
       .filter(e => String(e.expense_date || '').startsWith(monthPrefix))
       .reduce((sum,e)=>sum + Number(e.amount || 0),0);
 
@@ -1108,6 +1192,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       .split(/[,;\n]+/)
       .map(s=>s.trim())
       .filter(Boolean)
+      .filter(text=>!isSeparateMince(text))
       .map((text,index)=>({
         week_id:weekId,
         category:'Till middagar',
@@ -1345,6 +1430,8 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     await handleSession(null);
   });
 
+  document.getElementById('saveMonthlyMinceBtn')?.addEventListener('click',saveMonthlyMinceCost);
+  document.getElementById('monthlyMinceCost')?.addEventListener('keydown',e=>{if(e.key==='Enter') saveMonthlyMinceCost();});
   document.getElementById('cost1')?.addEventListener('input', scheduleSave);
   document.getElementById('addExtraBtn')?.addEventListener('click', addExtraPurchase);
   document.getElementById('extraAmount')?.addEventListener('keydown', e => { if(e.key==='Enter') addExtraPurchase(); });
