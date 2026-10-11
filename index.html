@@ -239,6 +239,15 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
 .week-budget-status[class*="budget-"]{background:var(--budget-bg);color:var(--budget-color);border-top:0;border-radius:9px;padding:9px 10px}
 #budgetProgressBar[class*="budget-"]{background:var(--budget-color)}
 #progressAmount[class*="budget-"],#progressFoot[class*="budget-"]{color:var(--budget-color)}
+
+.advance-cost{margin:14px 0;border:1px solid #e1e8e2;border-radius:12px;background:#f8faf8}
+.advance-cost>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px;font-size:13px;font-weight:750}
+.advance-cost>summary::-webkit-details-marker{display:none}
+.advance-cost>summary strong{margin-left:auto;white-space:nowrap;font-size:12px;color:#596b5e}
+.advance-cost>summary::after{content:'›';font-size:19px;color:#596b5e}
+.advance-cost[open]>summary::after{transform:rotate(90deg)}
+.advance-cost-body{padding:0 12px 8px}.advance-cost-body .cost-row{border-top:1px solid #e7ebe7}
+.advance-cost-body .budget-note{margin:8px 0 0}
 </style></head><body>
 <header id="top"><h1>Familjens matplan</h1><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -313,6 +322,18 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       <input inputmode="decimal" type="number" min="0" step="1" id="monthlyMinceCost" placeholder="0 kr">
     </div>
     <div class="save-status" id="monthlyMinceStatus" aria-live="polite"></div>
+
+    <details class="advance-cost hidden" id="nextWeekPurchase">
+      <summary><span>Handlat för nästa vecka</span><strong id="nextWeekPurchaseSummary">Ange belopp</strong></summary>
+      <div class="advance-cost-body">
+        <div class="cost-row">
+          <label for="nextWeekCost">Veckohandling<small id="nextWeekCostLabel"></small></label>
+          <input inputmode="decimal" type="number" min="0" step="1" id="nextWeekCost" placeholder="0 kr">
+        </div>
+        <div class="save-status" id="nextWeekCostStatus" aria-live="polite"></div>
+        <p class="budget-note">Räknas på nästa vecka och i månaden du handlar. Sparas automatiskt.</p>
+      </div>
+    </details>
 
     <div class="section-title">Aktuell vecka</div>
 
@@ -473,6 +494,14 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
   let monthlyMinceDirty = false;
   let monthlyMinceSaving = false;
   let monthlyMinceRevision = 0;
+  let nextCostWeekId = null;
+  let nextCostExpenseId = null;
+  let nextCostSavedAmount = 0;
+  let nextCostExpenseDate = null;
+  let nextCostTimer = null;
+  let nextCostDirty = false;
+  let nextCostSaving = false;
+  let nextCostRevision = 0;
   const MINCE_EXPENSE_DESCRIPTION = 'Köttfärs – månadskostnad';
 
   const fmt = n => Math.round(Number(n || 0)).toLocaleString('sv-SE') + ' kr';
@@ -515,7 +544,9 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     const extras=currentExtraExpenses.reduce((sum,e)=>sum+Number(e.amount||0),0);
     const currentWeek=weeklyShop+extras;
     const draft=currentMonthlyMinceDraft();
-    const displayedMonthSpent=monthSpent+(monthlyMinceDirty && draft!==null ? draft-monthlyMinceSavedAmount : 0);
+    const nextDraft=nextWeekCostDraft();
+    const nextMonthDelta=nextCostDirty && nextDraft!==null && purchaseInCurrentMonth(nextCostExpenseDate || stockholmToday()) ? nextDraft-nextCostSavedAmount : 0;
+    const displayedMonthSpent=monthSpent+(monthlyMinceDirty && draft!==null ? draft-monthlyMinceSavedAmount : 0)+nextMonthDelta;
     const remain=monthBudget-displayedMonthSpent;
 
     const monthMetric=document.getElementById('monthBudgetMetric');
@@ -533,7 +564,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     const progressAmount=document.getElementById('progressAmount');
     const progressFoot=document.getElementById('progressFoot');
     if(progress) progress.style.width=(monthBudget>0?Math.max(0,Math.min(100,(displayedMonthSpent/monthBudget)*100)):displayedMonthSpent>0?100:0)+'%';
-    if(progressAmount) progressAmount.textContent=fmt(monthSpent).replace(' kr','')+' / '+fmt(monthBudget);
+    if(progressAmount) progressAmount.textContent=fmt(displayedMonthSpent).replace(' kr','')+' / '+fmt(monthBudget);
     if(progressFoot) progressFoot.textContent=remain>=0?fmt(remain)+' kvar':fmt(Math.abs(remain))+' över månadsbudgeten';
 
     const status=document.getElementById('weekBudgetStatus');
@@ -631,6 +662,106 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       if(monthlyMinceDirty && revision!==monthlyMinceRevision) {
         monthlyMinceTimer=setTimeout(saveMonthlyMinceCost,400);
       }
+    }
+  }
+
+  function stockholmToday() {
+    return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Stockholm',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  }
+
+  function purchaseInCurrentMonth(date) {
+    return String(date||'').slice(0,7)===currentMonthStart().slice(0,7);
+  }
+
+  function nextWeekCostDraft() {
+    const input=document.getElementById('nextWeekCost');
+    if(!input || input.validity?.badInput) return null;
+    const amount=input.value.trim()===''?0:Number(input.value);
+    return Number.isFinite(amount) && amount>=0 ? amount : null;
+  }
+
+  function refreshNextCostSummary() {
+    const draft=nextWeekCostDraft();
+    const amount=nextCostDirty && draft!==null?draft:nextCostSavedAmount;
+    const el=document.getElementById('nextWeekPurchaseSummary');
+    if(el) el.textContent=amount>0?fmt(amount):'Ange belopp';
+  }
+
+  function loadNextWeekPurchase(week, expenses) {
+    const card=document.getElementById('nextWeekPurchase');
+    card.classList.toggle('hidden',!week);
+    if(!week) return;
+    if(nextCostWeekId!==week.id) {
+      clearTimeout(nextCostTimer);
+      nextCostDirty=false;
+      nextCostRevision++;
+      nextCostWeekId=week.id;
+    }
+    const expense=(expenses||[]).find(e=>e.week_id===week.id && e.category==='weekly_shop');
+    nextCostExpenseId=expense?.id || null;
+    nextCostSavedAmount=Number(expense?.amount || 0);
+    nextCostExpenseDate=expense?.expense_date || null;
+    if(!nextCostDirty && !nextCostSaving) document.getElementById('nextWeekCost').value=nextCostSavedAmount || '';
+    document.getElementById('nextWeekCostLabel').textContent='För '+formatWeekLabel(week.week_start);
+    refreshNextCostSummary();
+  }
+
+  function scheduleNextWeekCostSave() {
+    clearTimeout(nextCostTimer);
+    nextCostDirty=true;
+    nextCostRevision++;
+    const amount=nextWeekCostDraft();
+    document.getElementById('nextWeekCostStatus').textContent=amount===null?'Ange ett belopp på 0 kr eller mer.':'Sparar automatiskt…';
+    refreshNextCostSummary();
+    refreshDashboard();
+    if(amount!==null) nextCostTimer=setTimeout(saveNextWeekCost,400);
+  }
+
+  async function saveNextWeekCost() {
+    clearTimeout(nextCostTimer);
+    if(!householdId || !nextCostWeekId || !nextCostDirty || nextCostSaving) return;
+    const amount=nextWeekCostDraft();
+    if(amount===null) return;
+    const weekId=nextCostWeekId;
+    const revision=nextCostRevision;
+    const status=document.getElementById('nextWeekCostStatus');
+    nextCostSaving=true;
+    status.textContent='Sparar…';
+    try {
+      let result;
+      if(nextCostExpenseId) {
+        result=await sb.from('expenses').update({amount})
+          .eq('id',nextCostExpenseId).eq('household_id',householdId)
+          .select('id,amount,expense_date').single();
+      } else {
+        result=await sb.from('expenses').insert({
+          household_id:householdId,week_id:weekId,expense_date:stockholmToday(),
+          category:'weekly_shop',description:'Veckohandling',amount
+        }).select('id,amount,expense_date').single();
+        if(result.error?.code==='23505') {
+          result=await sb.from('expenses').update({amount})
+            .eq('household_id',householdId).eq('week_id',weekId).eq('category','weekly_shop')
+            .select('id,amount,expense_date').single();
+        }
+      }
+      if(result.error) throw result.error;
+      if(nextCostWeekId===weekId) {
+        const row=result.data;
+        if(purchaseInCurrentMonth(row.expense_date)) monthSpent+=Number(row.amount)-nextCostSavedAmount;
+        nextCostExpenseId=row.id;
+        nextCostExpenseDate=row.expense_date;
+        nextCostSavedAmount=Number(row.amount);
+        nextCostDirty=revision!==nextCostRevision;
+        refreshNextCostSummary();
+        refreshDashboard();
+        status.textContent=nextCostDirty?'Sparar automatiskt…':'Sparat';
+      }
+    } catch(error) {
+      console.error(error);
+      status.textContent='Kunde inte spara. Ändra beloppet eller lämna fältet för att försöka igen.';
+    } finally {
+      nextCostSaving=false;
+      if(nextCostDirty && revision!==nextCostRevision) nextCostTimer=setTimeout(saveNextWeekCost,400);
     }
   }
 
@@ -1120,6 +1251,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       .filter(e => String(e.expense_date || '').startsWith(monthPrefix))
       .reduce((sum,e)=>sum + Number(e.amount || 0),0);
 
+    loadNextWeekPurchase(plannedWeek,allExpenses);
     const weekExpenses = (expenses || []).filter(e => e.week_id === activeWeekId);
     const weekly = weekExpenses.find(e => e.category === 'weekly_shop');
     const extras = weekExpenses.filter(e => e.category === 'extra').sort((a,b)=>String(b.expense_date).localeCompare(String(a.expense_date)));
@@ -1549,6 +1681,9 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
   document.getElementById('monthlyMinceCost')?.addEventListener('input',scheduleMonthlyMinceSave);
   document.getElementById('monthlyMinceCost')?.addEventListener('blur',saveMonthlyMinceCost);
   document.getElementById('monthlyMinceCost')?.addEventListener('keydown',e=>{if(e.key==='Enter') saveMonthlyMinceCost();});
+  document.getElementById('nextWeekCost')?.addEventListener('input',scheduleNextWeekCostSave);
+  document.getElementById('nextWeekCost')?.addEventListener('blur',saveNextWeekCost);
+  document.getElementById('nextWeekCost')?.addEventListener('keydown',e=>{if(e.key==='Enter') saveNextWeekCost();});
   document.getElementById('cost1')?.addEventListener('input', scheduleSave);
   document.getElementById('addExtraBtn')?.addEventListener('click', addExtraPurchase);
   document.getElementById('extraAmount')?.addEventListener('keydown', e => { if(e.key==='Enter') addExtraPurchase(); });
