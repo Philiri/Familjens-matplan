@@ -296,7 +296,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     <div class="section-title">Månadskostnader</div>
     <div class="cost-row">
       <label for="monthlyMinceCost">Köttfärs<small>Köps separat i storpack. Räknas en gång per månad.</small></label>
-      <input inputmode="decimal" type="number" min="0" step="1" id="monthlyMinceCost" value="600">
+      <input inputmode="decimal" type="number" min="0" step="1" id="monthlyMinceCost" placeholder="Ange kostnad">
     </div>
     <div class="savebar"><button type="button" id="saveMonthlyMinceBtn">Spara månadskostnad</button></div>
     <div class="save-status" id="monthlyMinceStatus" aria-live="polite"></div>
@@ -452,7 +452,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
   let plannedMealsCache = [];
   let saveTimer = null;
   let monthlyMinceExpenseId = null;
-  let monthlyMinceSavedAmount = 600;
+  let monthlyMinceSavedAmount = 0;
   const MINCE_EXPENSE_DESCRIPTION = 'Köttfärs – månadskostnad';
 
   const fmt = n => Math.round(Number(n || 0)).toLocaleString('sv-SE') + ' kr';
@@ -545,7 +545,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
     if(row) return row;
     const inserted=await sb.from('expenses').insert({
       household_id:householdId,week_id:null,expense_date:monthStart,
-      category:'extra',description:MINCE_EXPENSE_DESCRIPTION,amount:600
+      category:'extra',description:MINCE_EXPENSE_DESCRIPTION,amount:0
     }).select('id,week_id,expense_date,category,description,amount').single();
     if(inserted.error && inserted.error.code!=='23505') throw inserted.error;
     if(inserted.data) row=inserted.data;
@@ -1063,7 +1063,7 @@ body.shopping-mode.shopping-next #nextWeek .next-card>:not(#nextShoppingCard){di
       const monthlyMince=await ensureMonthlyMinceExpense(allExpenses,monthStart);
       monthlyMinceExpenseId=monthlyMince.id;
       monthlyMinceSavedAmount=Number(monthlyMince.amount);
-      document.getElementById('monthlyMinceCost').value=monthlyMinceSavedAmount;
+      document.getElementById('monthlyMinceCost').value=monthlyMinceSavedAmount || '';
       document.getElementById('saveMonthlyMinceBtn').disabled=false;
     } catch(error) {
       console.error(error);
