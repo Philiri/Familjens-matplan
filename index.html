@@ -2119,7 +2119,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
 
   function financeMerchantKey(description){
     const key=String(description||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('sv-SE');
-    if(/^GRAB([ *]|$)/.test(key))return 'GRAB';
+    if(key.includes('GRAB'))return 'GRAB';
     if(/^(SAVR|LÖN|LON|BETALNINGAR|INBETALNING|STÅENDE ÖVERF|ÖVERF|BANKBDR|BARNBDR|BARNBIDRAG)([ *]|$)/.test(key))return null;
     return key||null;
   }
