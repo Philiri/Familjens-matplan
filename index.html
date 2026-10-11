@@ -270,7 +270,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
 
 
 .finance-overview-table{width:100%;border-collapse:collapse;font-size:13px}.finance-overview-table th,.finance-overview-table td{padding:10px 5px;border-bottom:1px solid #e7ebe7;text-align:right}.finance-overview-table th:first-child{text-align:left;font-weight:600}.finance-overview-table thead{color:#6f777b;font-size:12px}.finance-overview-table td{white-space:nowrap}.finance-total{background:#eef3ee;font-weight:750}.finance-table-wrap{overflow-x:auto}.finance-number-over{color:#b44235;font-weight:750}.finance-number-near{color:#90630e}.finance-number-within{color:#42734b}#financeCategoryOverview h3{margin:4px 0 8px}#financeCategoryOverview h3:not(:first-child){margin-top:22px}
-</style></head><body>
+.finance-rule-choice{display:flex;align-items:start;gap:10px;background:#eef3ee;border-radius:10px;padding:12px}.finance-rule-choice[hidden]{display:none!important}#financeView .finance-rule-choice input{display:inline-block;width:auto;flex:none;margin:3px 0 0}.finance-tx{scroll-margin-top:180px}</style></head><body>
 <header id="top"><h1 id="appTitle">Familjens matplan</h1><div class="view-switch" aria-label="Välj vy"><button type="button" id="foodViewButton" aria-pressed="true">Mat</button><button type="button" id="otherViewButton" aria-pressed="false">Övrigt</button></div><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
 </div></header><main>
@@ -504,14 +504,14 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
         <label class="finance-wide">Beskrivning<input id="financeDescription" maxlength="200" required placeholder="T.ex. barnskor eller lön"></label>
         <label>Belopp i kr<input id="financeAmount" type="number" step="0.01" inputmode="decimal" required></label>
         <p class="budget-note">Ange ett positivt belopp. Använd minus för en återbetalning eller ett uttag från sparande. Mat registreras i Mat.</p>
-        <div class="finance-actions finance-wide"><button type="submit">Spara post</button><button type="button" id="financeCancel" class="secondary">Avbryt</button></div>
+        <label class="finance-rule-choice finance-wide" id="financeRuleChoice" hidden><input type="checkbox" id="financeApplySimilar" checked><span id="financeRuleChoiceText"></span></label><div class="finance-actions finance-wide"><button type="submit">Spara post</button><button type="button" id="financeCancel" class="secondary">Avbryt</button></div>
       </form>
     </details>
     <details class="finance-fold" open><summary>Registrerade poster <span id="financeEntryCount"></span></summary>
       <label class="finance-filter">Filtrera kategori<select id="financeFilter"><option value="">Alla kategorier</option></select></label>
       <div id="financeTransactions"></div>
     </details>
-    <details class="finance-fold" id="financeCategoryFold"><summary id="financeCategoryTitle">Hantera kategorier</summary>
+    <details class="finance-fold" id="financeRulesFold"><summary>Automatiska kategoriregler</summary><p class="budget-note">Regler används för okategoriserade poster med samma leverantör, även i andra månader. Redan bekräftade poster behåller sin kategori. Möjliga dubletter behöver fortfarande kontrolleras. Att ta bort en regel påverkar framtida matchning.</p><div id="financeRulesList"></div></details><details class="finance-fold" id="financeCategoryFold"><summary id="financeCategoryTitle">Hantera kategorier</summary>
       <form id="financeCategoryForm" class="finance-form">
         <input type="hidden" id="financeCategoryId">
         <label class="finance-wide">Namn<input id="financeCategoryName" maxlength="120" required></label>
@@ -1918,7 +1918,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   }
 
   const financeKinds={income:'Inkomster',fixed:'Fasta kostnader',variable:'Rörliga kostnader',saving:'Sparande',transfer:'Överföringar'};
-  let financeCategories=[], financeBudgets=[], financeTransactions=[], financeFood=[], financeBusy=false, financeLoadVersion=0, financePending=[], financeReviewLimit=20;
+  let financeCategories=[], financeBudgets=[], financeTransactions=[], financeFood=[], financeBusy=false, financeLoadVersion=0, financePending=[], financeReviewLimit=20, financeRules=[], financeRuleNotice='';
   const fe=id=>document.getElementById(id);
   const financeMoney=n=>Number(n||0).toLocaleString('sv-SE',{maximumFractionDigits:2})+' kr';
   const financeRound=n=>Math.round((n+Number.EPSILON)*100)/100;
@@ -1961,18 +1961,21 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     if(!options.keepVisible) fe('financeContent').hidden=true;
     const {from,to}=financeMonthRange(month);
     try{
-      const [categories,budgets,transactions,food]=await Promise.all([
+      const [categories,budgets,transactions,food,rules]=await Promise.all([
         financeFetchAll('finance_categories','id,name,kind,default_budget,notes,sort_order,system_key,plan_owner'),
         sb.from('finance_budgets').select('category_id,amount').eq('household_id',householdId).eq('month',from),
         financeFetchAll('finance_transactions','id,category_id,transaction_date,description,amount,review_status,source_info,source_out,source_in','transaction_date',from,to),
-        financeFetchAll('expenses','id,expense_date,description,amount','expense_date',from,to)
+        financeFetchAll('expenses','id,expense_date,description,amount','expense_date',from,to),
+        sb.from('finance_category_rules').select('merchant_key,scope_actor,category_id').eq('household_id',householdId).order('merchant_key')
       ]);
       if(version!==financeLoadVersion)return;
       if(budgets.error)throw budgets.error;
-      financeCategories=categories.sort((a,b)=>a.sort_order-b.sort_order||a.name.localeCompare(b.name,'sv'));
+      if(rules.error)throw rules.error;
+      financeRules=rules.data||[];
+      financeCategories=categories.sort((a,b)=>a.name.localeCompare(b.name,'sv',{sensitivity:'base'}));
       financeBudgets=budgets.data||[];financeTransactions=transactions.filter(t=>t.review_status==='confirmed');financePending=transactions.filter(t=>t.review_status==='pending').sort((a,b)=>a.transaction_date.localeCompare(b.transaction_date)||a.description.localeCompare(b.description,'sv'));financeFood=food;
       renderFinance();fe('financeContent').hidden=false;
-      fe('financeStatus').textContent='Synkad. '+financeTransactions.length+' bekräftade poster, '+financePending.length+' att gå igenom för vald månad.';
+      fe('financeStatus').textContent='Synkad. '+financeTransactions.length+' bekräftade poster, '+financePending.length+' att gå igenom för vald månad.'+(financeRuleNotice?' '+financeRuleNotice:'');financeRuleNotice='';
     }catch(error){if(version!==financeLoadVersion)return;console.error(error);fe('financeStatus').textContent='Kunde inte hämta ekonomin. Tryck på Uppdatera för att försöka igen.';}
   }
   function renderFinance(){
@@ -1981,7 +1984,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const p=totals.planned,a=totals.actual;
     fe('financeMetrics').innerHTML=[['Planerad inkomst',p.income],['Planerade kostnader inkl. mat',p.fixed+p.variable],['Planerat sparande',p.saving],['Kvar efter hela budgeten',totals.plannedRemaining],['Registrerade kostnader inkl. mat',a.fixed+a.variable],['Registrerat sparande',a.saving]].map(([label,value])=>'<div class="bigmetric"><span>'+label+'</span><b>'+financeMoney(value)+'</b></div>').join('')+'<div class="bigmetric full"><span>Registrerade inkomster</span><b>'+financeMoney(a.income)+'</b><small>Utfallet är bara komplett när alla månadens poster är registrerade.</small></div>';
     const selected=fe('financeCategory').value,filter=fe('financeFilter').value;
-    const options=Object.entries(financeKinds).map(([kind,label])=>'<optgroup label="'+label+'">'+financeCategories.filter(c=>c.kind===kind).map(c=>'<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>').join('')+'</optgroup>').join('');
+    const options=financeCategories.map(c=>'<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>').join('');
     fe('financeCategory').innerHTML='<option value="">Välj kategori</option>'+options;
     fe('financeFilter').innerHTML='<option value="">Alla kategorier</option>'+options;
     fe('financeCategory').value=selected;fe('financeFilter').value=filter;
@@ -1997,6 +2000,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     fe('financeGoFood').onclick=()=>{setFinanceView('food');fe('budgetOverview').open=true;fe('budget').scrollIntoView({behavior:'smooth'});};
     fe('financeGroups').dataset.rendered='true';
     renderFinanceReview();
+    renderFinanceRules();
     renderFinanceTransactions();
   }
   function renderFinanceTransactions(){
@@ -2009,6 +2013,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     fe('financeEntryForm').reset();fe('financeEntryId').value='';
     fe('financeDate').value=stockholmToday().startsWith(fe('financeMonth').value)?stockholmToday():fe('financeMonth').value+'-01';
     fe('financeEntryTitle').textContent='Lägg till en post';
+    if(fe('financeRuleChoice')){fe('financeRuleChoice').hidden=true;fe('financeApplySimilar').checked=false;}
   }
   function financeCategoryReset(){fe('financeCategoryForm').reset();fe('financeCategoryId').value='';fe('financeKind').disabled=false;fe('financeCategoryTitle').textContent='Hantera kategorier';}
 
@@ -2030,7 +2035,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
       if(!document.body.classList.contains('finance-mode'))return;
       const target=point.keys.map(key=>document.querySelector('[data-finance-position="'+key+'"]')).find(Boolean);
       if(target)window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-point.offset),behavior:'instant'});
-      else if(point.review)fe('financeGroups').scrollIntoView({block:'start',behavior:'instant'});
+      else if(point.review)(fe('financeReviewList').firstElementChild||fe('financeGroups')).scrollIntoView({block:'start',behavior:'instant'});
       else window.scrollTo({top:point.scroll,behavior:'instant'});
     });
   }
@@ -2076,6 +2081,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
       financeEntryReset();
       if(edit){const t=[...financeTransactions,...financePending].find(t=>t.id===edit);fe('financeEntryId').value=t.id;fe('financeDate').value=t.transaction_date;fe('financeCategory').value=t.category_id||'';fe('financeDescription').value=t.description;fe('financeAmount').value=t.amount;fe('financeEntryTitle').textContent=t.review_status==='pending'?'Kontrollera och bekräfta post':'Redigera post';}
       else {const c=financeCategories.find(c=>c.id===add);fe('financeCategory').value=c.id;if(c.kind!=='variable'){fe('financeDescription').value=c.name;fe('financeAmount').value=financeBudget(c)||'';}}
+      refreshFinanceRuleChoice(true);
       fe('financeEntryFold').open=true;fe('financeEntryFold').scrollIntoView({behavior:'smooth',block:'center'});fe('financeAmount').focus({preventScroll:true});
     }
     if(cat){financeReturnPoint=captureFinancePosition(button);const c=financeCategories.find(c=>c.id===cat);fe('financeCategoryId').value=c.id;fe('financeCategoryName').value=c.name;fe('financePlanOwner').value=c.plan_owner||'household';fe('financeKind').value=c.kind;fe('financeKind').disabled=true;fe('financeDefaultBudget').value=c.default_budget;fe('financeNotes').value=c.notes;fe('financeCategoryTitle').textContent='Ändra kategori';fe('financeCategoryFold').open=true;fe('financeCategoryFold').scrollIntoView({behavior:'smooth',block:'center'});}
@@ -2090,7 +2096,16 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     if(!payload.description)return;
     // Keep the ID after a failed/ambiguous response so retry cannot duplicate this post.
     const entryId=id||crypto.randomUUID();fe('financeEntryId').value=entryId;
-    financeWrite(()=>[...financeTransactions,...financePending].some(t=>t.id===entryId)?sb.from('finance_transactions').update(payload).eq('household_id',householdId).eq('id',entryId).select():sb.from('finance_transactions').upsert({...payload,id:entryId}).select(),()=>{fe('financeMonth').value=payload.transaction_date.slice(0,7);financeEntryReset();fe('financeEntryFold').open=false;});
+    const useRule=!fe('financeRuleChoice').hidden && fe('financeApplySimilar').checked;
+    let matchedCount=0;
+    financeWrite(async()=>{
+      if(useRule){
+        const result=await sb.rpc('finance_categorize_similar',{p_household:householdId,p_transaction:entryId,p_category:payload.category_id,p_date:payload.transaction_date,p_description:payload.description,p_amount:payload.amount});
+        if(!result.error)matchedCount=Number(result.data||0);
+        return result;
+      }
+      return [...financeTransactions,...financePending].some(t=>t.id===entryId)?sb.from('finance_transactions').update(payload).eq('household_id',householdId).eq('id',entryId).select():sb.from('finance_transactions').upsert({...payload,id:entryId}).select();
+    },()=>{if(useRule)financeRuleNotice='Regeln sparad. Samma kategori användes för '+matchedCount+' ytterligare poster.';fe('financeMonth').value=payload.transaction_date.slice(0,7);financeEntryReset();fe('financeEntryFold').open=false;});
   });
   fe('financeCategoryForm').addEventListener('submit',e=>{
     e.preventDefault();if(!e.currentTarget.reportValidity())return;
@@ -2099,6 +2114,30 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     if(!payload.name||!Number.isFinite(amount)||amount<0)return;
     const newId=id||crypto.randomUUID();fe('financeCategoryId').value=newId;
     financeWrite(()=>financeCategories.some(c=>c.id===id)?sb.from('finance_categories').update(payload).eq('household_id',householdId).eq('id',id).select():sb.from('finance_categories').upsert({...payload,id:newId,kind:fe('financeKind').value,sort_order:financeCategories.length}).select(),()=>{financeCategoryReset();fe('financeCategoryFold').open=false;});
+  });
+
+
+  function financeMerchantKey(description){
+    const key=String(description||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('sv-SE');
+    if(/^GRAB([ *]|$)/.test(key))return 'GRAB';
+    if(/^(SAVR|LÖN|LON|BETALNINGAR|INBETALNING|STÅENDE ÖVERF|ÖVERF|BANKBDR|BARNBDR|BARNBIDRAG)([ *]|$)/.test(key))return null;
+    return key||null;
+  }
+  function refreshFinanceRuleChoice(reset){
+    const row=[...financeTransactions,...financePending].find(t=>t.id===fe('financeEntryId').value);
+    const key=financeMerchantKey(row?.description);
+    const category=financeCategories.find(c=>c.id===fe('financeCategory').value);
+    fe('financeRuleChoice').hidden=!key;
+    if(reset)fe('financeApplySimilar').checked=Boolean(key);
+    fe('financeRuleChoiceText').textContent=key?'Använd samma kategori för andra '+key+'-poster i alla månader'+(category?.plan_owner && category.plan_owner!=='household'?' för samma person':'')+'.':'';
+  }
+  function renderFinanceRules(){
+    fe('financeRulesList').innerHTML=financeRules.length?financeRules.map((r,i)=>'<div class="finance-tx"><b>'+escapeHtml(r.merchant_key)+'</b><small>'+escapeHtml(financeCategories.find(c=>c.id===r.category_id)?.name||'')+(r.scope_actor==='*'?'':' · '+escapeHtml(r.scope_actor))+'</small><button type="button" class="secondary" data-finance-remove-rule="'+i+'">Ta bort regel</button></div>').join(''):'<p class="budget-note">Inga regler sparade ännu. Regeln skapas när du sparar med kryssrutan för samma leverantör.</p>';
+  }
+  fe('financeRulesList').addEventListener('click',e=>{
+    const button=e.target.closest('[data-finance-remove-rule]');if(!button)return;
+    const rule=financeRules[Number(button.dataset.financeRemoveRule)];if(!rule)return;
+    financeWrite(()=>sb.from('finance_category_rules').delete().eq('household_id',householdId).eq('merchant_key',rule.merchant_key).eq('scope_actor',rule.scope_actor).select());
   });
 
   function renderFinanceReview(){
@@ -2112,6 +2151,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const t=financePending.find(t=>t.id===fe('financeEntryId').value);
     const c=financeCategories.find(c=>c.id===fe('financeCategory').value);
     if(t&&c)fe('financeAmount').value=financeRound(c.kind==='income'?Number(t.source_in)-Number(t.source_out):Number(t.source_out)-Number(t.source_in));
+    refreshFinanceRuleChoice(false);
   };
   function shiftFinanceMonth(delta){
     if(financeBusy)return;
