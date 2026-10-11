@@ -2024,8 +2024,14 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const keys=[];
     if(row){
       if(!review)keys.push(row.dataset.financePosition);
-      if(row.nextElementSibling?.dataset.financePosition)keys.push(row.nextElementSibling.dataset.financePosition);
-      if(row.previousElementSibling?.dataset.financePosition)keys.push(row.previousElementSibling.dataset.financePosition);
+      if(review){
+        let next=row.nextElementSibling,previous=row.previousElementSibling;
+        while(next){if(next.dataset.financePosition)keys.push(next.dataset.financePosition);next=next.nextElementSibling;}
+        while(previous){if(previous.dataset.financePosition)keys.push(previous.dataset.financePosition);previous=previous.previousElementSibling;}
+      }else{
+        if(row.nextElementSibling?.dataset.financePosition)keys.push(row.nextElementSibling.dataset.financePosition);
+        if(row.previousElementSibling?.dataset.financePosition)keys.push(row.previousElementSibling.dataset.financePosition);
+      }
     }
     return {keys,offset:row?.getBoundingClientRect().top??0,scroll:window.scrollY,review};
   }
@@ -2139,7 +2145,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     financeWrite(()=>sb.from('finance_category_rules').delete().eq('household_id',householdId).eq('merchant_key',rule.merchant_key).eq('scope_actor',rule.scope_actor).select());
   });
 
-  let financeReviewDrafts=new Map(),financeReviewCompleted=new Map(),financeReviewScope='';
+  let financeReviewDrafts=new Map(),financeReviewScope='';
   function financeInlineAmount(t,c){
     return financeRound(t.source_out!=null&&t.source_in!=null?(c?.kind==='income'?Number(t.source_in)-Number(t.source_out):Number(t.source_out)-Number(t.source_in)):Number(t.amount));
   }
@@ -2157,16 +2163,13 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   }
   function renderFinanceReview(){
     const scope=householdId+'|'+fe('financeMonth').value;
-    if(scope!==financeReviewScope){financeReviewScope=scope;financeReviewDrafts.clear();financeReviewCompleted.clear();}
-    const pendingIds=new Set(financePending.map(t=>t.id));
-    for(const id of financeReviewCompleted.keys())if(pendingIds.has(id))financeReviewCompleted.delete(id);
-    fe('financeReviewFold').hidden=financePending.length===0&&financeReviewCompleted.size===0;
+    if(scope!==financeReviewScope){financeReviewScope=scope;financeReviewDrafts.clear();}
+    fe('financeReviewFold').hidden=financePending.length===0;
     fe('financeReviewCount').textContent='('+financePending.length+' kvar)';
-    const rows=[...financePending,...financeReviewCompleted.values()].sort((a,b)=>a.transaction_date.localeCompare(b.transaction_date)||a.description.localeCompare(b.description,'sv'));
+    const rows=[...financePending].sort((a,b)=>a.transaction_date.localeCompare(b.transaction_date)||a.description.localeCompare(b.description,'sv'));
     fe('financeReviewList').innerHTML=rows.map(t=>{
-      const done=financeReviewCompleted.has(t.id),d=financeInlineDraft(t);
-      const head='<div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(done?t.amount:Number(t.source_out)||Number(t.source_in))+(done?'':' '+(Number(t.source_in)>0?'in':'ut'))+'</strong></div><small>'+escapeHtml(t.transaction_date)+'</small><small>'+escapeHtml(t.source_info||'')+'</small>';
-      if(done)return '<div class="finance-tx finance-review-done" data-finance-position="transaction-'+t.id+'">'+head+'<p class="finance-inline-result" role="status">Sparad · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+(t.matchedCount?' · '+t.matchedCount+' fler poster fick kategorin':'')+'</p></div>';
+      const d=financeInlineDraft(t);
+      const head='<div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(Number(t.source_out)||Number(t.source_in))+' '+(Number(t.source_in)>0?'in':'ut')+'</strong></div><small>'+escapeHtml(t.transaction_date)+'</small><small>'+escapeHtml(t.source_info||'')+'</small>';
       const options=financeCategories.map(c=>'<option value="'+c.id+'" '+(c.id===d.category?'selected':'')+'>'+escapeHtml(c.name)+'</option>').join('');
       return '<form class="finance-tx finance-inline-form" data-finance-inline="'+t.id+'" data-finance-position="transaction-'+t.id+'">'+head+
         '<label>Kategori<select name="category" required><option value="">Välj kategori</option>'+options+'</select></label>'+
@@ -2198,7 +2201,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     if(!Number.isFinite(amount)||amount===0){status.textContent='Ange ett belopp som inte är 0.';return;}
     if(!d.description.trim()){status.textContent='Ange en beskrivning.';return;}
     const payload={household_id:householdId,category_id:d.category,transaction_date:d.date,description:d.description.trim(),amount,review_status:'confirmed'};
-    financeReturnPoint=captureFinancePosition(form);
+    financeReturnPoint=captureFinancePosition(form,true);
     status.textContent='Sparar…';let matchedCount=0;
     const ok=await financeWrite(async()=>{
       if(d.similar&&financeMerchantKey(t.description)){
@@ -2208,8 +2211,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
       return sb.from('finance_transactions').update(payload).eq('household_id',householdId).eq('id',t.id).select();
     },()=>{
       financeReviewDrafts.delete(t.id);
-      if(payload.transaction_date.slice(0,7)===fe('financeMonth').value)financeReviewCompleted.set(t.id,{...t,...payload,matchedCount});
-      financeRuleNotice=matchedCount?'Samma kategori användes för '+matchedCount+' ytterligare poster.':'';
+      financeRuleNotice='Posten sparad.'+(matchedCount?' Samma kategori användes för '+matchedCount+' ytterligare poster.':'');
     });
     if(!ok){status.textContent='Kunde inte spara. Försök igen.';financeReturnPoint=null;}
   });
