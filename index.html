@@ -2024,7 +2024,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     fe('financeEntryTitle').textContent='Lägg till en saknad betalning';
     if(fe('financeRuleChoice')){fe('financeRuleChoice').hidden=true;fe('financeApplySimilar').checked=false;}
   }
-  function financeCategoryReset(){fe('financeCategoryForm').reset();fe('financeCategoryId').value='';fe('financeKind').disabled=false;fe('financeCategoryTitle').textContent='Hantera kategorier';}
+  function financeCategoryReset(){fe('financeCategoryForm').reset();fe('financeDefaultBudget').readOnly=false;fe('financeCategoryId').value='';fe('financeKind').disabled=false;fe('financeCategoryTitle').textContent='Hantera kategorier';}
 
   let financeReturnPoint=null;
   function captureFinancePosition(source,review=false){
