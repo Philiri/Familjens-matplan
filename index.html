@@ -268,6 +268,8 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
 .finance-group{border-top:1px solid #e7ebe7;padding-top:12px;margin-top:12px}.finance-group>summary{cursor:pointer;font-weight:750;display:flex;justify-content:space-between;gap:8px}.finance-group>summary span{font-size:12px;color:#6f777b;text-align:right}.finance-row{border-bottom:1px solid #eef1ee;padding:12px 0}.finance-row-head{display:flex;justify-content:space-between;gap:10px;align-items:start}.finance-row-head b{font-size:14px;overflow-wrap:anywhere}.finance-row small{color:#6f777b;display:block;margin:4px 0;line-height:1.4}.finance-values{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:7px;align-items:center}.finance-values label,.finance-values span{font-size:12px;color:#6f777b}.finance-values strong{font-size:16px;display:block;color:#243038;margin-top:5px}.finance-values input{max-width:130px}.finance-row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.finance-row-actions button{font-size:12px!important;padding:7px 10px!important}.finance-tx{padding:12px 0;border-top:1px solid #eef1ee}.finance-tx small{display:block;color:#6f777b;margin-top:4px}.finance-food{background:#eef3ee;border-radius:12px;padding:12px;margin-top:14px}.finance-food p{margin:6px 0;font-size:13px}.finance-warning{color:#a04435!important}.finance-values .finance-over{color:#b44235}.finance-values .finance-within{color:#42734b}.finance-values .finance-near{color:#90630e}
 @media(max-width:430px){.finance-heading h2{font-size:21px}.finance-form{grid-template-columns:1fr}.finance-wide{grid-column:auto}.finance-heading{align-items:start}#financeMetrics b{font-size:19px}}
 
+
+.finance-overview-table{width:100%;border-collapse:collapse;font-size:13px}.finance-overview-table th,.finance-overview-table td{padding:10px 5px;border-bottom:1px solid #e7ebe7;text-align:right}.finance-overview-table th:first-child{text-align:left;font-weight:600}.finance-overview-table thead{color:#6f777b;font-size:12px}.finance-overview-table td{white-space:nowrap}.finance-total{background:#eef3ee;font-weight:750}.finance-table-wrap{overflow-x:auto}.finance-number-over{color:#b44235;font-weight:750}.finance-number-near{color:#90630e}.finance-number-within{color:#42734b}#financeCategoryOverview h3{margin:4px 0 8px}#financeCategoryOverview h3:not(:first-child){margin-top:22px}
 </style></head><body>
 <header id="top"><h1 id="appTitle">Familjens matplan</h1><div class="view-switch" aria-label="Välj vy"><button type="button" id="foodViewButton" aria-pressed="true">Mat</button><button type="button" id="otherViewButton" aria-pressed="false">Övrigt</button></div><div class="nav">
 <a href="#todayCard">Idag</a><button type="button" id="shoppingModeBtn">Handla</button><a href="#budget">Budget</a><a href="#nextWeek">Nästa vecka</a><a href="#mealRules">Regler</a><a href="#history">Historik</a>
@@ -491,7 +493,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   <div id="financeStatus" class="save-status" aria-live="polite">Logga in för att visa hushållets ekonomi.</div>
   <button type="button" id="financeRefresh" class="secondary">Uppdatera</button>
   <div id="financeContent" hidden>
-    <div class="budget-grid" id="financeMetrics"></div>
+    <div class="budget-grid" id="financeMetrics"></div><section class="finance-fold" id="financeCategoryOverview" aria-label="Kategoriöversikt"></section>
     <details class="finance-fold" id="financeReviewFold" open><summary>Att gå igenom <span id="financeReviewCount"></span></summary><p class="budget-note">Dessa transaktioner är importerade men räknas inte i utfallet ännu. Kontrollera kategori och belopp och spara för att bekräfta. Överföringar och kortbetalningar ska inte räknas som nya kostnader.</p><div id="financeReviewList"></div><button type="button" id="financeMoreReview" class="secondary">Visa fler</button></details>
     <details class="finance-fold" open><summary>Månadsbudget och utfall</summary><div id="financeGroups"></div></details>
     <details class="finance-fold" id="financeEntryFold"><summary id="financeEntryTitle">Lägg till en post</summary>
@@ -514,7 +516,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
         <input type="hidden" id="financeCategoryId">
         <label class="finance-wide">Namn<input id="financeCategoryName" maxlength="120" required></label>
         <label>Typ<select id="financeKind"><option value="variable">Rörlig kostnad</option><option value="fixed">Fast kostnad</option><option value="income">Inkomst</option><option value="saving">Sparande</option><option value="transfer">Överföring</option></select></label>
-        <label>Standardbudget per månad<input id="financeDefaultBudget" type="number" step="0.01" min="0" inputmode="decimal" value="0" required></label>
+        <label>Tillhör i månadsplanen<select id="financePlanOwner"><option value="household">Gemensamt / Familjekonto</option><option value="philip">Philip privat</option><option value="elin">Elin privat</option></select></label><label>Standardbudget per månad<input id="financeDefaultBudget" type="number" step="0.01" min="0" inputmode="decimal" value="0" required></label>
         <label class="finance-wide">Anteckning<input id="financeNotes" maxlength="500"></label>
         <p class="budget-note finance-wide">Standardbelopp används för månader som inte har en egen budget. En ändrad standard gäller även tidigare månader utan egen budget. Ändra månadens belopp i tabellen för att behålla övriga månader. Kategorins namn gäller alla månader.</p>
         <div class="finance-actions finance-wide"><button type="submit">Spara kategori</button><button type="button" id="financeCategoryCancel" class="secondary">Ny kategori</button></div>
@@ -1960,7 +1962,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const {from,to}=financeMonthRange(month);
     try{
       const [categories,budgets,transactions,food]=await Promise.all([
-        financeFetchAll('finance_categories','id,name,kind,default_budget,notes,sort_order,system_key'),
+        financeFetchAll('finance_categories','id,name,kind,default_budget,notes,sort_order,system_key,plan_owner'),
         sb.from('finance_budgets').select('category_id,amount').eq('household_id',householdId).eq('month',from),
         financeFetchAll('finance_transactions','id,category_id,transaction_date,description,amount,review_status,source_info,source_out,source_in','transaction_date',from,to),
         financeFetchAll('expenses','id,expense_date,description,amount','expense_date',from,to)
@@ -1974,6 +1976,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     }catch(error){if(version!==financeLoadVersion)return;console.error(error);fe('financeStatus').textContent='Kunde inte hämta ekonomin. Tryck på Uppdatera för att försöka igen.';}
   }
   function renderFinance(){
+    renderCategoryOverview();
     const totals=financeTotals(financeCategories,financeBudgets,financeTransactions,financeFood,monthBudget);
     const p=totals.planned,a=totals.actual;
     fe('financeMetrics').innerHTML=[['Planerad inkomst',p.income],['Planerade kostnader inkl. mat',p.fixed+p.variable],['Planerat sparande',p.saving],['Kvar efter hela budgeten',totals.plannedRemaining],['Registrerade kostnader inkl. mat',a.fixed+a.variable],['Registrerat sparande',a.saving]].map(([label,value])=>'<div class="bigmetric"><span>'+label+'</span><b>'+financeMoney(value)+'</b></div>').join('')+'<div class="bigmetric full"><span>Registrerade inkomster</span><b>'+financeMoney(a.income)+'</b><small>Utfallet är bara komplett när alla månadens poster är registrerade.</small></div>';
@@ -2048,7 +2051,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
       else {const c=financeCategories.find(c=>c.id===add);fe('financeCategory').value=c.id;if(c.kind!=='variable'){fe('financeDescription').value=c.name;fe('financeAmount').value=financeBudget(c)||'';}}
       fe('financeEntryFold').open=true;fe('financeEntryFold').scrollIntoView({behavior:'smooth',block:'center'});fe('financeAmount').focus({preventScroll:true});
     }
-    if(cat){const c=financeCategories.find(c=>c.id===cat);fe('financeCategoryId').value=c.id;fe('financeCategoryName').value=c.name;fe('financeKind').value=c.kind;fe('financeKind').disabled=true;fe('financeDefaultBudget').value=c.default_budget;fe('financeNotes').value=c.notes;fe('financeCategoryTitle').textContent='Ändra kategori';fe('financeCategoryFold').open=true;fe('financeCategoryFold').scrollIntoView({behavior:'smooth',block:'center'});}
+    if(cat){const c=financeCategories.find(c=>c.id===cat);fe('financeCategoryId').value=c.id;fe('financeCategoryName').value=c.name;fe('financePlanOwner').value=c.plan_owner||'household';fe('financeKind').value=c.kind;fe('financeKind').disabled=true;fe('financeDefaultBudget').value=c.default_budget;fe('financeNotes').value=c.notes;fe('financeCategoryTitle').textContent='Ändra kategori';fe('financeCategoryFold').open=true;fe('financeCategoryFold').scrollIntoView({behavior:'smooth',block:'center'});}
     if(del){const t=financeTransactions.find(t=>t.id===del);if(window.confirm('Ta bort ”'+t.description+'” på '+financeMoney(t.amount)+'?'))financeWrite(()=>sb.from('finance_transactions').delete().eq('household_id',householdId).eq('id',del).select(),()=>{if(fe('financeEntryId').value===del)financeEntryReset();});}
   });
   fe('financeEntryForm').addEventListener('submit',e=>{
@@ -2065,7 +2068,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   fe('financeCategoryForm').addEventListener('submit',e=>{
     e.preventDefault();if(!e.currentTarget.reportValidity())return;
     const id=fe('financeCategoryId').value,amount=Number(fe('financeDefaultBudget').value);
-    const payload={household_id:householdId,name:fe('financeCategoryName').value.trim(),default_budget:financeRound(amount),notes:fe('financeNotes').value.trim()};
+    const payload={household_id:householdId,name:fe('financeCategoryName').value.trim(),plan_owner:fe('financePlanOwner').value,default_budget:financeRound(amount),notes:fe('financeNotes').value.trim()};
     if(!payload.name||!Number.isFinite(amount)||amount<0)return;
     const newId=id||crypto.randomUUID();fe('financeCategoryId').value=newId;
     financeWrite(()=>financeCategories.some(c=>c.id===id)?sb.from('finance_categories').update(payload).eq('household_id',householdId).eq('id',id).select():sb.from('finance_categories').upsert({...payload,id:newId,kind:fe('financeKind').value,sort_order:financeCategories.length}).select(),()=>{financeCategoryReset();fe('financeCategoryFold').open=false;});
@@ -2091,6 +2094,38 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   fe('financePrev').onclick=()=>shiftFinanceMonth(-1);
   fe('financeNext').onclick=()=>shiftFinanceMonth(1);
 
+  function householdCategoryOverview(categories,budgets,transactions,food,foodBudget){
+    const sum=rows=>financeRound(rows.reduce((s,t)=>s+Number(t.amount),0));
+    const budget=c=>c?Number(budgets.find(b=>b.category_id===c.id)?.amount??c.default_budget):0;
+    const rows=[{key:'food_statement',name:'Mat & dagligvaror',food:true},
+      {key:'daily_car',name:'Bil/bränsle/parkering'},{key:'daily_children',name:'Barn'},
+      {key:'daily_health',name:'Apotek/hälsa'},{key:'daily_leisure',name:'Familjenöje/restaurang'},
+      {key:'daily_home',name:'Hem/övrigt gemensamt'},{key:'personal_philip',name:'Philip – egen pott'},
+      {key:'personal_elin',name:'Elin – egen pott'}].map(row=>{
+        const c=categories.find(c=>c.system_key===row.key);
+        const actual=sum(transactions.filter(t=>t.category_id===c?.id))+(row.food?sum(food):0);
+        return {...row,id:c?.id,budget:row.food?Number(foodBudget):budget(c),actual:financeRound(actual)};
+      });
+    const sharedBudget=sum(rows.slice(0,6).map(r=>({amount:r.budget}))),sharedActual=sum(rows.slice(0,6).map(r=>({amount:r.actual})));
+    const personalBefore=owner=>financeRound(categories.filter(c=>c.plan_owner===owner).reduce((total,c)=>{
+      if(c.kind==='income')return total+budget(c);
+      if(c.kind==='saving'||c.kind==='fixed'||c.system_key==='family_funding_'+owner)return total-budget(c);
+      return total;
+    },0));
+    const beforePhilip=personalBefore('philip'),beforeElin=personalBefore('elin');
+    const fundingPhilip=Math.round((sharedBudget+beforePhilip-beforeElin)/2),fundingElin=sharedBudget-fundingPhilip;
+    const personalPlan={philip:financeRound(beforePhilip-fundingPhilip),elin:financeRound(beforeElin-fundingElin)};
+    const withdrawals=categories.filter(c=>c.system_key==='family_withdrawal').map(c=>c.id);
+    return {rows,sharedBudget,sharedActual,personalPlan,withdrawal:financeRound(-sum(transactions.filter(t=>withdrawals.includes(t.category_id)))),
+      personalRemaining:{philip:financeRound(personalPlan.philip-rows[6].actual),elin:financeRound(personalPlan.elin-rows[7].actual)}};
+  }
+  function renderCategoryOverview(){
+    const model=householdCategoryOverview(financeCategories,financeBudgets,financeTransactions,financeFood,monthBudget);
+    const totals=financeTotals(financeCategories,financeBudgets,financeTransactions,financeFood,monthBudget);
+    const number=n=>Math.round(n).toLocaleString('sv-SE');
+    fe('financeCategoryOverview').innerHTML='<h3>Vardagsbudgeten</h3><p class="budget-note">Vald månad · belopp i kr. Uppdateras när en post registreras eller ändras.</p><div class="finance-table-wrap"><table class="finance-overview-table"><thead><tr><th>Kategori</th><th>Budget</th><th>Spenderat</th><th>Kvar</th></tr></thead><tbody>'+model.rows.map(r=>'<tr><th scope="row">'+escapeHtml(r.name)+'</th><td>'+number(r.budget)+'</td><td>'+number(r.actual)+'</td><td class="finance-number-'+budgetState(r.actual,r.budget)+'">'+number(r.budget-r.actual)+'</td></tr>').join('')+'<tr class="finance-total"><th scope="row">Gemensam vardag</th><td>'+number(model.sharedBudget)+'</td><td>'+number(model.sharedActual)+'</td><td>'+number(model.sharedBudget-model.sharedActual)+'</td></tr></tbody></table></div><p class="budget-note">Gemensam vardag omfattar de sex första kategorierna, oavsett betalkort. Era egna potter ingår inte i den summan.</p><h3>Nyckeltal</h3><div class="finance-table-wrap"><table class="finance-overview-table"><thead><tr><th>Nyckeltal</th><th>Plan / mål</th><th>Registrerat / kvar</th></tr></thead><tbody><tr><th>Sparande totalt, netto</th><td>'+number(totals.planned.saving)+'</td><td>'+number(totals.actual.saving)+'</td></tr><tr><th>AMEX / gemensam vardag</th><td>'+number(model.sharedBudget)+'</td><td>'+number(model.sharedActual)+'</td></tr><tr><th>Philip – personligt utrymme</th><td>'+number(model.personalPlan.philip)+'</td><td>'+number(model.personalRemaining.philip)+'</td></tr><tr><th>Elin – personligt utrymme</th><td>'+number(model.personalPlan.elin)+'</td><td>'+number(model.personalRemaining.elin)+'</td></tr><tr><th>Uttag från Familjespar till vanlig månad</th><td>0</td><td>'+number(model.withdrawal)+'</td></tr></tbody></table></div><p class="budget-note">Personligt utrymme utgår från planerad inkomst, sparande, privata fasta kostnader och överföring till Familjekonto. Gemensam vardag fördelas så att ni får ungefär lika mycket kvar. Registrerade egna köp dras sedan av. Det är en beräkning enligt planen, inte ert banksaldo. Uttag från Familjespar registreras med minus i sin kategori och minskar nettosparandet.</p>'+(financePending.length?'<p class="finance-warning budget-note">'+financePending.length+' poster återstår att gå igenom och ingår inte i utfallet.</p>':'');
+  }
+
   setupAppView();
   const initialFinanceQuery=new URLSearchParams(window.location.search);
   const initialFinanceMonth=initialFinanceQuery.get('month');
@@ -2110,4 +2145,5 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
 </script>
 
 </body></html>
+
 
