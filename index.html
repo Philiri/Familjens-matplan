@@ -493,7 +493,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   <div id="financeStatus" class="save-status" aria-live="polite">Logga in för att visa hushållets ekonomi.</div>
   <button type="button" id="financeRefresh" class="secondary">Uppdatera</button>
   <div id="financeContent" hidden>
-    <details class="finance-fold" id="financeEntryFold"><summary id="financeEntryTitle">Registrera veckans köp</summary>
+    <details class="finance-fold" id="financeEntryFold"><summary id="financeEntryTitle">Registrera köp</summary>
       <form id="financeEntryForm" class="finance-form">
         <input type="hidden" id="financeEntryId">
         <label>Vem betalade?<select id="financePayer" required><option value="Philip">Philip</option><option value="Elin">Elin</option><option value="Gemensamt">Gemensamt</option></select></label>
@@ -501,11 +501,11 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
         <label>Kategori<select id="financeCategory" required></select></label>
         <label class="finance-wide">Beskrivning, valfri<input id="financeDescription" maxlength="200" placeholder="T.ex. barnskor"></label>
         <label>Belopp i kr<input id="financeAmount" type="number" step="0.01" inputmode="decimal" required></label>
-        <p class="budget-note">Kategorin styr vilken budget som påverkas. Vem som betalade sparas för er överblick. Ange minus för återbetalning. Matköp som redan finns i Mat ska inte läggas in igen.</p>
+        <p class="budget-note">Ange köpets datum så räknas det till rätt månad. Kategorin styr vilken budget som påverkas. Vem som betalade sparas för er överblick. Ange minus för återbetalning. Matköp som redan finns i Mat ska inte läggas in igen.</p>
         <label class="finance-rule-choice finance-wide" id="financeRuleChoice" hidden><input type="checkbox" id="financeApplySimilar" checked><span id="financeRuleChoiceText"></span></label><div class="finance-actions finance-wide"><button type="submit">Spara post</button><button type="button" id="financeCancel" class="secondary">Avbryt</button></div>
       </form>
       <p id="financeQuickStatus" class="budget-note" role="status" aria-live="polite"></p>
-      <h3 id="financeWeekTitle">Veckans registreringar</h3><div id="financeWeekTransactions"></div>
+      <h3 id="financeWeekTitle">Månadens registreringar</h3><div id="financeWeekTransactions"></div>
     </details>
     <div class="budget-grid" id="financeMetrics"></div><section class="finance-fold" id="financeCategoryOverview" aria-label="Kategoriöversikt"></section>
     <details class="finance-fold" id="financeReviewFold" open><summary>Att gå igenom <span id="financeReviewCount"></span></summary><p class="budget-note">Här visas bara poster som behöver er hjälp: oklar kategori eller möjlig dubbelräkning. Tydliga betalningar är redan registrerade och finns i översikten. Sparade regler används för andra poster med samma namn.</p><div id="financeReviewList"></div><button type="button" id="financeMoreReview" class="secondary">Visa fler</button></details>
@@ -2027,30 +2027,25 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     const info=String(t?.source_info||'');
     return info.match(/Betalat av: (Philip|Elin|Gemensamt)(?: ·|$)/)?.[1]||(['Philip','Elin','Gemensamt'].includes(info.split(' · ')[1])?info.split(' · ')[1]:'Gemensamt');
   }
-  function financeWeekRange(date){
-    const d=new Date(date+'T12:00:00Z');
-    d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));
-    const from=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+7);
-    return {from,to:d.toISOString().slice(0,10)};
-  }
   async function renderFinanceWeek(){
-    if(!householdId||!fe('financeDate').value)return;
-    const version=++financeWeekVersion,{from,to}=financeWeekRange(fe('financeDate').value);
-    const end=new Date(to+'T12:00:00Z');end.setUTCDate(end.getUTCDate()-1);
-    fe('financeWeekTitle').textContent='Registreringar '+from+' – '+end.toISOString().slice(0,10);
+    if(!householdId||!/^\d{4}-\d{2}$/.test(fe('financeMonth').value))return;
+    const version=++financeWeekVersion,{from,to}=financeMonthRange(fe('financeMonth').value);
+    const monthName=new Intl.DateTimeFormat('sv-SE',{month:'long',year:'numeric',timeZone:'Europe/Stockholm'}).format(new Date(from+'T12:00:00Z'));
+    fe('financeWeekTitle').textContent='Registreringar för '+monthName;
+    if(!fe('financeEntryId').value)fe('financeEntryTitle').textContent='Registrera köp – '+monthName;
     try{
       const rows=await financeFetchAll('finance_transactions','id,category_id,transaction_date,description,amount,review_status,source_info,source_out,source_in','transaction_date',from,to);
       if(version!==financeWeekVersion)return;
       financeWeekTransactions=rows.filter(t=>t.review_status==='confirmed').sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.description.localeCompare(b.description,'sv'));
-      fe('financeWeekTransactions').innerHTML=financeWeekTransactions.length?financeWeekTransactions.map(t=>'<div class="finance-tx" data-finance-position="week-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financePayerOf(t))+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Rätta</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga köp registrerade för denna vecka. Matköp visas i Mat.</p>';
-    }catch(error){if(version===financeWeekVersion)fe('financeWeekTransactions').textContent='Kunde inte hämta veckans köp. Tryck på Uppdatera.';}
+      fe('financeWeekTransactions').innerHTML=financeWeekTransactions.length?financeWeekTransactions.map(t=>'<div class="finance-tx" data-finance-position="week-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financePayerOf(t))+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Rätta</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga köp registrerade för denna månad. Matköp visas i Mat.</p>';
+    }catch(error){if(version===financeWeekVersion)fe('financeWeekTransactions').textContent='Kunde inte hämta månadens köp. Tryck på Uppdatera.';}
   }
   function financeEntryReset(keep={}){
     fe('financeEntryForm').reset();fe('financeEntryId').value='';
     fe('financeDate').value=stockholmToday().startsWith(fe('financeMonth').value)?stockholmToday():fe('financeMonth').value+'-01';
     if(keep.date)fe('financeDate').value=keep.date;
     if(keep.payer)fe('financePayer').value=keep.payer;
-    fe('financeEntryTitle').textContent='Registrera veckans köp';
+    fe('financeEntryTitle').textContent='Registrera köp';
     fe('financeQuickStatus').textContent='';
     if(fe('financeRuleChoice')){fe('financeRuleChoice').hidden=true;fe('financeApplySimilar').checked=false;}
   }
@@ -2107,7 +2102,6 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   fe('financeRefresh').onclick=loadFinance;
   fe('financeMonth').onchange=()=>{if(!fe('financeMonth').checkValidity())return;financeReviewLimit=20;financeEntryReset();loadFinance();};
   fe('financeFilter').onchange=renderFinanceTransactions;
-  fe('financeDate').onchange=()=>{if(fe('financeDate').checkValidity())renderFinanceWeek();};
   fe('financeCancel').onclick=()=>{financeEntryReset();fe('financeEntryFold').open=false;restoreFinancePosition(financeReturnPoint);financeReturnPoint=null;};
   fe('financeCategoryCancel').onclick=()=>{financeCategoryReset();financeReturnPoint=null;};
   fe('financeGroups').addEventListener('change',async e=>{
