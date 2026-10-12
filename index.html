@@ -493,20 +493,23 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   <div id="financeStatus" class="save-status" aria-live="polite">Logga in för att visa hushållets ekonomi.</div>
   <button type="button" id="financeRefresh" class="secondary">Uppdatera</button>
   <div id="financeContent" hidden>
+    <details class="finance-fold" id="financeEntryFold"><summary id="financeEntryTitle">Registrera veckans köp</summary>
+      <form id="financeEntryForm" class="finance-form">
+        <input type="hidden" id="financeEntryId">
+        <label>Vem betalade?<select id="financePayer" required><option value="Philip">Philip</option><option value="Elin">Elin</option><option value="Gemensamt">Gemensamt</option></select></label>
+        <label>Datum<input type="date" id="financeDate" required></label>
+        <label>Kategori<select id="financeCategory" required></select></label>
+        <label class="finance-wide">Beskrivning, valfri<input id="financeDescription" maxlength="200" placeholder="T.ex. barnskor"></label>
+        <label>Belopp i kr<input id="financeAmount" type="number" step="0.01" inputmode="decimal" required></label>
+        <p class="budget-note">Kategorin styr vilken budget som påverkas. Vem som betalade sparas för er överblick. Ange minus för återbetalning. Matköp som redan finns i Mat ska inte läggas in igen.</p>
+        <label class="finance-rule-choice finance-wide" id="financeRuleChoice" hidden><input type="checkbox" id="financeApplySimilar" checked><span id="financeRuleChoiceText"></span></label><div class="finance-actions finance-wide"><button type="submit">Spara post</button><button type="button" id="financeCancel" class="secondary">Avbryt</button></div>
+      </form>
+      <p id="financeQuickStatus" class="budget-note" role="status" aria-live="polite"></p>
+      <h3 id="financeWeekTitle">Veckans registreringar</h3><div id="financeWeekTransactions"></div>
+    </details>
     <div class="budget-grid" id="financeMetrics"></div><section class="finance-fold" id="financeCategoryOverview" aria-label="Kategoriöversikt"></section>
     <details class="finance-fold" id="financeReviewFold" open><summary>Att gå igenom <span id="financeReviewCount"></span></summary><p class="budget-note">Här visas bara poster som behöver er hjälp: oklar kategori eller möjlig dubbelräkning. Tydliga betalningar är redan registrerade och finns i översikten. Sparade regler används för andra poster med samma namn.</p><div id="financeReviewList"></div><button type="button" id="financeMoreReview" class="secondary">Visa fler</button></details>
     <details class="finance-fold" open><summary>Månadsbudget och utfall</summary><p class="budget-note">Importerade betalningar räknas automatiskt när kategorin är klar. Tryck på ett utfall för att se och rätta betalningarna. Under Alternativ kan du lägga till en betalning som saknas.</p><div id="financeGroups"></div></details>
-    <details class="finance-fold" id="financeEntryFold"><summary id="financeEntryTitle">Lägg till en saknad betalning</summary>
-      <form id="financeEntryForm" class="finance-form">
-        <input type="hidden" id="financeEntryId">
-        <label>Datum<input type="date" id="financeDate" required></label>
-        <label>Kategori<select id="financeCategory" required></select></label>
-        <label class="finance-wide">Beskrivning<input id="financeDescription" maxlength="200" required placeholder="T.ex. barnskor eller lön"></label>
-        <label>Belopp i kr<input id="financeAmount" type="number" step="0.01" inputmode="decimal" required></label>
-        <p class="budget-note">Lägg bara till betalningar som saknas i kontoutdraget. Ange ett positivt belopp. Använd minus för en återbetalning eller ett uttag från sparande. Mat registreras i Mat.</p>
-        <label class="finance-rule-choice finance-wide" id="financeRuleChoice" hidden><input type="checkbox" id="financeApplySimilar" checked><span id="financeRuleChoiceText"></span></label><div class="finance-actions finance-wide"><button type="submit">Spara post</button><button type="button" id="financeCancel" class="secondary">Avbryt</button></div>
-      </form>
-    </details>
     <details class="finance-fold" id="financeRegisteredFold"><summary>Registrerade poster <span id="financeEntryCount"></span></summary>
       <label class="finance-filter">Filtrera kategori<select id="financeFilter"><option value="">Alla kategorier</option></select></label>
       <div id="financeTransactions"></div>
@@ -2011,17 +2014,44 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     renderFinanceReview();
     renderFinanceRules();
     renderFinanceTransactions();
+    renderFinanceWeek();
   }
   function renderFinanceTransactions(){
     const filter=fe('financeFilter').value;
     const rows=financeTransactions.filter(t=>!filter||t.category_id===filter).sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.id.localeCompare(b.id));
     fe('financeEntryCount').textContent='('+rows.length+')';
-    fe('financeTransactions').innerHTML=rows.length?rows.map(t=>'<div class="finance-tx" data-finance-position="transaction-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Redigera</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga poster registrerade här för vald månad. Matköpen finns i Mat.</p>';
+    fe('financeTransactions').innerHTML=rows.length?rows.map(t=>'<div class="finance-tx" data-finance-position="transaction-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+(t.source_info?.includes('Betalat av:')?' · '+escapeHtml(financePayerOf(t)):'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Redigera</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga poster registrerade här för vald månad. Matköpen finns i Mat.</p>';
   }
-  function financeEntryReset(){
+  let financeWeekTransactions=[],financeWeekVersion=0;
+  function financePayerOf(t){
+    const info=String(t?.source_info||'');
+    return info.match(/Betalat av: (Philip|Elin|Gemensamt)(?: ·|$)/)?.[1]||(['Philip','Elin','Gemensamt'].includes(info.split(' · ')[1])?info.split(' · ')[1]:'Gemensamt');
+  }
+  function financeWeekRange(date){
+    const d=new Date(date+'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));
+    const from=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+7);
+    return {from,to:d.toISOString().slice(0,10)};
+  }
+  async function renderFinanceWeek(){
+    if(!householdId||!fe('financeDate').value)return;
+    const version=++financeWeekVersion,{from,to}=financeWeekRange(fe('financeDate').value);
+    const end=new Date(to+'T12:00:00Z');end.setUTCDate(end.getUTCDate()-1);
+    fe('financeWeekTitle').textContent='Registreringar '+from+' – '+end.toISOString().slice(0,10);
+    try{
+      const rows=await financeFetchAll('finance_transactions','id,category_id,transaction_date,description,amount,review_status,source_info,source_out,source_in','transaction_date',from,to);
+      if(version!==financeWeekVersion)return;
+      financeWeekTransactions=rows.filter(t=>t.review_status==='confirmed').sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.description.localeCompare(b.description,'sv'));
+      fe('financeWeekTransactions').innerHTML=financeWeekTransactions.length?financeWeekTransactions.map(t=>'<div class="finance-tx" data-finance-position="week-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financePayerOf(t))+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Rätta</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga köp registrerade för denna vecka. Matköp visas i Mat.</p>';
+    }catch(error){if(version===financeWeekVersion)fe('financeWeekTransactions').textContent='Kunde inte hämta veckans köp. Tryck på Uppdatera.';}
+  }
+  function financeEntryReset(keep={}){
     fe('financeEntryForm').reset();fe('financeEntryId').value='';
     fe('financeDate').value=stockholmToday().startsWith(fe('financeMonth').value)?stockholmToday():fe('financeMonth').value+'-01';
-    fe('financeEntryTitle').textContent='Lägg till en saknad betalning';
+    if(keep.date)fe('financeDate').value=keep.date;
+    if(keep.payer)fe('financePayer').value=keep.payer;
+    fe('financeEntryTitle').textContent='Registrera veckans köp';
+    fe('financeQuickStatus').textContent='';
     if(fe('financeRuleChoice')){fe('financeRuleChoice').hidden=true;fe('financeApplySimilar').checked=false;}
   }
   function financeCategoryReset(){fe('financeCategoryForm').reset();fe('financeDefaultBudget').readOnly=false;fe('financeCategoryId').value='';fe('financeKind').disabled=false;fe('financeCategoryTitle').textContent='Hantera kategorier';}
@@ -2077,6 +2107,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   fe('financeRefresh').onclick=loadFinance;
   fe('financeMonth').onchange=()=>{if(!fe('financeMonth').checkValidity())return;financeReviewLimit=20;financeEntryReset();loadFinance();};
   fe('financeFilter').onchange=renderFinanceTransactions;
+  fe('financeDate').onchange=()=>{if(fe('financeDate').checkValidity())renderFinanceWeek();};
   fe('financeCancel').onclick=()=>{financeEntryReset();fe('financeEntryFold').open=false;restoreFinancePosition(financeReturnPoint);financeReturnPoint=null;};
   fe('financeCategoryCancel').onclick=()=>{financeCategoryReset();financeReturnPoint=null;};
   fe('financeGroups').addEventListener('change',async e=>{
@@ -2094,20 +2125,24 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     if(add||edit){
       financeReturnPoint=captureFinancePosition(button,Boolean(edit&&financePending.some(t=>t.id===edit)));
       financeEntryReset();
-      if(edit){const t=[...financeTransactions,...financePending].find(t=>t.id===edit);fe('financeEntryId').value=t.id;fe('financeDate').value=t.transaction_date;fe('financeCategory').value=t.category_id||'';fe('financeDescription').value=t.description;fe('financeAmount').value=t.amount;fe('financeEntryTitle').textContent=t.review_status==='pending'?'Kontrollera och bekräfta post':'Redigera post';}
+      if(edit){const t=[...financeTransactions,...financePending,...financeWeekTransactions].find(t=>t.id===edit);fe('financeEntryId').value=t.id;fe('financePayer').value=financePayerOf(t);fe('financeDate').value=t.transaction_date;fe('financeCategory').value=t.category_id||'';fe('financeDescription').value=t.description;fe('financeAmount').value=t.amount;fe('financeEntryTitle').textContent=t.review_status==='pending'?'Kontrollera och bekräfta post':'Redigera post';}
       else {const c=financeCategories.find(c=>c.id===add);fe('financeCategory').value=c.id;if(c.kind!=='variable'){fe('financeDescription').value=c.name;fe('financeAmount').value=financeBudget(c)||'';}}
       refreshFinanceRuleChoice(true);
       fe('financeEntryFold').open=true;fe('financeEntryFold').scrollIntoView({behavior:'smooth',block:'center'});fe('financeAmount').focus({preventScroll:true});
     }
     if(cat){financeReturnPoint=captureFinancePosition(button);const c=financeCategories.find(c=>c.id===cat);fe('financeCategoryId').value=c.id;fe('financeCategoryName').value=c.name;fe('financePlanOwner').value=c.plan_owner||'household';fe('financeKind').value=c.kind;fe('financeKind').disabled=true;fe('financeDefaultBudget').value=c.system_key?.startsWith('personal_')?financeBudget(c):c.default_budget;fe('financeDefaultBudget').readOnly=Boolean(c.system_key?.startsWith('personal_'));fe('financeNotes').value=c.notes;fe('financeCategoryTitle').textContent='Ändra kategori';fe('financeCategoryFold').open=true;fe('financeCategoryFold').scrollIntoView({behavior:'smooth',block:'center'});}
-    if(del){const t=financeTransactions.find(t=>t.id===del);if(window.confirm('Ta bort ”'+t.description+'” på '+financeMoney(t.amount)+'?'))financeWrite(()=>sb.from('finance_transactions').delete().eq('household_id',householdId).eq('id',del).select(),()=>{if(fe('financeEntryId').value===del)financeEntryReset();});}
+    if(del){const t=[...financeTransactions,...financeWeekTransactions].find(t=>t.id===del);if(window.confirm('Ta bort ”'+t.description+'” på '+financeMoney(t.amount)+'?'))financeWrite(()=>sb.from('finance_transactions').delete().eq('household_id',householdId).eq('id',del).select(),()=>{if(fe('financeEntryId').value===del)financeEntryReset();});}
   });
   fe('financeEntryForm').addEventListener('submit',e=>{
     e.preventDefault();if(!e.currentTarget.reportValidity())return;
     const amount=financeRound(Number(fe('financeAmount').value));
     if(!Number.isFinite(amount)||amount===0){fe('financeStatus').textContent='Ange ett belopp som inte är 0.';return;}
     const id=fe('financeEntryId').value;
-    const payload={household_id:householdId,review_status:'confirmed',category_id:fe('financeCategory').value,transaction_date:fe('financeDate').value,description:fe('financeDescription').value.trim(),amount};
+    const category=financeCategories.find(c=>c.id===fe('financeCategory').value);
+    const payer=fe('financePayer').value;
+    const original=[...financeTransactions,...financePending,...financeWeekTransactions].find(t=>t.id===id);
+    const sourceInfo=String(original?.source_info||'Manuell veckoregistrering').replace(/(?: · )?Betalat av: (Philip|Elin|Gemensamt)(?= ·|$)/g,'');
+    const payload={household_id:householdId,review_status:'confirmed',category_id:fe('financeCategory').value,transaction_date:fe('financeDate').value,description:fe('financeDescription').value.trim()||category.name,amount,source_info:sourceInfo+' · Betalat av: '+payer};
     if(!payload.description)return;
     // Keep the ID after a failed/ambiguous response so retry cannot duplicate this post.
     const entryId=id||crypto.randomUUID();fe('financeEntryId').value=entryId;
@@ -2117,10 +2152,11 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
       if(useRule){
         const result=await sb.rpc('finance_categorize_similar',{p_household:householdId,p_transaction:entryId,p_category:payload.category_id,p_date:payload.transaction_date,p_description:payload.description,p_amount:payload.amount});
         if(!result.error)matchedCount=Number(result.data||0);
-        return result;
+        if(result.error)return result;
+        return sb.from('finance_transactions').update({source_info:payload.source_info}).eq('household_id',householdId).eq('id',entryId).select();
       }
-      return [...financeTransactions,...financePending].some(t=>t.id===entryId)?sb.from('finance_transactions').update(payload).eq('household_id',householdId).eq('id',entryId).select():sb.from('finance_transactions').upsert({...payload,id:entryId}).select();
-    },()=>{if(useRule)financeRuleNotice='Regeln sparad. Samma kategori användes för '+matchedCount+' ytterligare poster.';fe('financeMonth').value=payload.transaction_date.slice(0,7);financeEntryReset();fe('financeEntryFold').open=false;});
+      return [...financeTransactions,...financePending,...financeWeekTransactions].some(t=>t.id===entryId)?sb.from('finance_transactions').update(payload).eq('household_id',householdId).eq('id',entryId).select():sb.from('finance_transactions').upsert({...payload,id:entryId}).select();
+    },()=>{if(useRule)financeRuleNotice='Regeln sparad. Samma kategori användes för '+matchedCount+' ytterligare poster.';fe('financeMonth').value=payload.transaction_date.slice(0,7);financeEntryReset({date:payload.transaction_date,payer});fe('financeEntryFold').open=true;fe('financeQuickStatus').textContent='Sparat: '+payload.description+' · '+financeMoney(payload.amount)+'. Lägg till nästa köp.';});
   });
   fe('financeCategoryForm').addEventListener('submit',e=>{
     e.preventDefault();if(!e.currentTarget.reportValidity())return;
