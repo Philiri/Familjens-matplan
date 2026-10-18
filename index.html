@@ -226,7 +226,9 @@ body.shopping-mode #shoppingModeBtn{background:#fff;color:#203040}
 body.shopping-mode.shopping-next #v1{display:none!important}
 body.shopping-mode.shopping-next #nextWeek{display:none!important}
 body.shopping-mode.shopping-next #nextShoppingPanel{display:block!important}
-.shopping-panel{display:none;scroll-margin-top:95px}
+.shopping-panel{display:block;scroll-margin-top:95px}
+body.shopping-mode #nextShoppingFold>summary{display:none}
+body.shopping-mode #nextShoppingFold>.compact-body{display:block}
 #nextShoppingCard{background:#fff;border-radius:18px;padding:14px;margin:12px 0 24px}
 body.shopping-mode #shoppingList{display:block!important}
 #nextShoppingCard .qty{white-space:normal;text-align:right;max-width:140px}
@@ -431,9 +433,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     </div>
   </details>
 </section>
-<section class="shopping-panel locked" id="nextShoppingPanel">
-  <div class="shopping-card" id="nextShoppingCard"><h2>Nästa veckas inköpslista</h2><div id="nextShoppingList"></div><p class="budget-note">Kontrollera vad ni redan har hemma innan ni handlar.</p></div>
-</section>
+
 <section class="rolling-next locked compact-section" id="nextWeek">
   <details class="compact-fold" open>
     <summary>
@@ -460,6 +460,15 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   </details>
 </section>
 
+
+<section class="shopping-panel locked compact-section" id="nextShoppingPanel">
+  <details class="compact-fold" id="nextShoppingFold">
+    <summary>Nästa veckas inköpslista</summary>
+    <div class="compact-body">
+      <div class="shopping-card" id="nextShoppingCard"><div id="nextShoppingList"></div><p class="budget-note">Kontrollera vad ni redan har hemma innan ni handlar.</p></div>
+    </div>
+  </details>
+</section>
 
 <section class="week locked compact-section" id="mealRules">
   <details class="compact-fold">
@@ -1908,6 +1917,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   function syncShoppingView() {
     const shopping=document.body.classList.contains('shopping-mode');
     document.body.classList.toggle('shopping-next',shopping && Boolean(plannedWeekId));
+    if(shopping && plannedWeekId) document.getElementById('nextShoppingFold').open=true;
     const btn=document.getElementById('shoppingModeBtn');
     if(btn) btn.textContent=shopping?'Klar':'Handla';
     if(shopping && !plannedWeekId) {
