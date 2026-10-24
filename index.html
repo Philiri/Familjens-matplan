@@ -1433,7 +1433,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
       } else {
         const {data,error}=await sb.from('expenses').insert({
           household_id:householdId,week_id:activeWeekId,
-          expense_date:new Date().toISOString().slice(0,10),
+          expense_date:stockholmToday(),
           category:'weekly_shop',description:'Veckohandling',amount
         }).select('id').single();
         if(error) throw error;
@@ -1458,7 +1458,7 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     document.getElementById('syncText').textContent='Sparar…';
     const {error}=await sb.from('expenses').insert({
       household_id:householdId,week_id:activeWeekId,
-      expense_date:new Date().toISOString().slice(0,10),
+      expense_date:stockholmToday(),
       category:'extra',description:desc,amount
     });
     if(error) {
@@ -2009,6 +2009,15 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
       fe('financeStatus').textContent='Synkad. '+financeTransactions.length+' bekräftade poster, '+financePending.length+' att gå igenom för vald månad.'+(financeRuleNotice?' '+financeRuleNotice:'');financeRuleNotice='';
     }catch(error){if(version!==financeLoadVersion)return;console.error(error);fe('financeStatus').textContent='Kunde inte hämta ekonomin. Tryck på Uppdatera för att försöka igen.';}
   }
+  // Project Mat purchases into the finance lists; keep their single source in expenses.
+  function financeFoodEntries(){
+    const category=financeCategories.find(c=>c.system_key==='food_statement');
+    return financeFood.map(t=>({...t,id:'food:'+t.id,category_id:category?.id,transaction_date:t.expense_date,fromFood:true,review_status:'confirmed'}));
+  }
+  function financePaymentActions(t,label='Rätta'){
+    return t.fromFood?'<small>Automatiskt från Mat</small><button type="button" class="secondary" data-finance-food="true">Visa i Mat</button>':
+      '<button type="button" class="secondary" data-finance-edit="'+t.id+'">'+label+'</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button>';
+  }
   function renderFinance(){
     renderCategoryOverview();
     const totals=financeTotals(financeCategories,financeBudgets,financeTransactions,financeFood,monthBudget);
@@ -2031,12 +2040,12 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     fe('financeGroups').innerHTML=Object.entries(financeKinds).map(([kind,label])=>{
       const cats=financeCategories.filter(c=>c.kind===kind);
       return '<details class="finance-group" data-kind="'+kind+'" '+((openKinds.has(kind)||(firstRender&&kind==='fixed'))?'open':'')+'><summary>'+label+'<span>'+financeMoney(a[kind])+' registrerat</span></summary>'+cats.map(c=>{
-        const tx=financeTransactions.filter(t=>t.category_id===c.id),actual=financeRound(tx.reduce((s,t)=>s+Number(t.amount),0)),budget=financeBudget(c);
+        const tx=[...financeTransactions.filter(t=>t.category_id===c.id),...(c.system_key==='food_statement'?financeFoodEntries():[])],actual=financeRound(tx.reduce((s,t)=>s+Number(t.amount),0)),budget=financeBudget(c);
         const state=(kind==='fixed'||kind==='variable')&&c.system_key!=='food_statement'&&tx.length?'finance-'+budgetState(actual,budget):'';
         const pendingCount=financePending.filter(t=>t.category_id===c.id).length;
         return '<div class="finance-row finance-compact-row" data-finance-position="category-'+c.id+'"><div class="finance-compact-name"><b>'+escapeHtml(c.name)+'</b>'+(pendingCount?'<small>'+pendingCount+' betalning'+(pendingCount===1?'':'ar')+' att kontrollera</small>':'')+'</div>'+
           '<label class="finance-compact-budget">Budget<input aria-label="Budget för '+escapeHtml(c.name)+'" data-finance-budget="'+c.id+'" '+(c.system_key==='food_statement'?'disabled title="Matbudgeten visas i matvyn"':c.system_key?.startsWith('personal_')?'disabled title="Hela egna potten beräknas automatiskt från månadens plan"':'')+' type="number" min="0" step="0.01" inputmode="decimal" value="'+(c.system_key==='food_statement'?monthBudget:budget)+'"></label>'+
-          '<details class="finance-category-payments"><summary aria-label="Visa betalningar för '+escapeHtml(c.name)+'"><small>Registrerat</small><strong class="'+state+'">'+financeMoney(actual)+'</strong></summary><div class="finance-payment-list">'+(tx.length?tx.slice().sort((x,y)=>x.transaction_date.localeCompare(y.transaction_date)).map(t=>'<div class="finance-payment-item"><b>'+escapeHtml(t.description)+'</b><span>'+escapeHtml(t.transaction_date)+' · '+financeMoney(t.amount)+'</span><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Rätta</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga bekräftade betalningar för denna månad.</p>')+'</div></details>'+
+          '<details class="finance-category-payments"><summary aria-label="Visa betalningar för '+escapeHtml(c.name)+'"><small>Registrerat</small><strong class="'+state+'">'+financeMoney(actual)+'</strong></summary><div class="finance-payment-list">'+(tx.length?tx.slice().sort((x,y)=>x.transaction_date.localeCompare(y.transaction_date)).map(t=>'<div class="finance-payment-item"><b>'+escapeHtml(t.description)+'</b><span>'+escapeHtml(t.transaction_date)+' · '+financeMoney(t.amount)+'</span><div class="finance-row-actions">'+financePaymentActions(t)+'</div></div>').join(''):'<p class="budget-note">Inga bekräftade betalningar för denna månad.</p>')+'</div></details>'+
           (kind==='fixed'&&budget>0&&tx.length===0&&pendingCount===0?'<div class="finance-wide"><button type="button" data-finance-confirm="'+c.id+'">Bekräfta '+financeMoney(budget)+'</button></div>':'')+
           '<details class="finance-category-menu"><summary aria-label="Alternativ för '+escapeHtml(c.name)+'">Alternativ</summary><div class="finance-row-actions"><button type="button" class="secondary" data-finance-add="'+c.id+'">Lägg till saknad betalning</button><button type="button" class="secondary" data-finance-category="'+c.id+'">Ändra kategori</button></div>'+(c.notes?'<small>'+escapeHtml(c.notes)+'</small>':'')+'</details></div>';
       }).join('')+'</details>';
@@ -2050,9 +2059,9 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   }
   function renderFinanceTransactions(){
     const filter=fe('financeFilter').value;
-    const rows=financeTransactions.filter(t=>!filter||t.category_id===filter).sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.id.localeCompare(b.id));
+    const rows=[...financeTransactions,...financeFoodEntries()].filter(t=>!filter||t.category_id===filter).sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.id.localeCompare(b.id));
     fe('financeEntryCount').textContent='('+rows.length+')';
-    fe('financeTransactions').innerHTML=rows.length?rows.map(t=>'<div class="finance-tx" data-finance-position="transaction-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+(t.source_info?.includes('Betalat av:')?' · '+escapeHtml(financePayerOf(t)):'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Redigera</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga poster registrerade här för vald månad. Matköpen finns i Mat.</p>';
+    fe('financeTransactions').innerHTML=rows.length?rows.map(t=>'<div class="finance-tx" data-finance-position="transaction-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+(t.source_info?.includes('Betalat av:')?' · '+escapeHtml(financePayerOf(t)):'')+'</small><div class="finance-row-actions">'+financePaymentActions(t,'Redigera')+'</div></div>').join(''):'<p class="budget-note">Inga poster registrerade här för vald månad. Matköp visas automatiskt här.</p>';
   }
   let financeWeekTransactions=[],financeWeekVersion=0;
   function financePayerOf(t){
@@ -2068,8 +2077,8 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     try{
       const rows=await financeFetchAll('finance_transactions','id,category_id,transaction_date,description,amount,review_status,source_info,source_out,source_in','transaction_date',from,to);
       if(version!==financeWeekVersion)return;
-      financeWeekTransactions=rows.filter(t=>t.review_status==='confirmed').sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.description.localeCompare(b.description,'sv'));
-      fe('financeWeekTransactions').innerHTML=financeWeekTransactions.length?financeWeekTransactions.map(t=>'<div class="finance-tx" data-finance-position="week-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financePayerOf(t))+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions"><button type="button" class="secondary" data-finance-edit="'+t.id+'">Rätta</button><button type="button" class="secondary" data-finance-delete="'+t.id+'">Ta bort</button></div></div>').join(''):'<p class="budget-note">Inga köp registrerade för denna månad. Matköp visas i Mat.</p>';
+      financeWeekTransactions=[...rows.filter(t=>t.review_status==='confirmed'),...financeFoodEntries()].sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)||a.description.localeCompare(b.description,'sv'));
+      fe('financeWeekTransactions').innerHTML=financeWeekTransactions.length?financeWeekTransactions.map(t=>'<div class="finance-tx" data-finance-position="week-'+t.id+'"><div class="finance-row-head"><b>'+escapeHtml(t.description)+'</b><strong>'+financeMoney(t.amount)+'</strong></div><small>'+escapeHtml(t.transaction_date)+' · '+escapeHtml(financePayerOf(t))+' · '+escapeHtml(financeCategories.find(c=>c.id===t.category_id)?.name||'')+'</small><div class="finance-row-actions">'+financePaymentActions(t)+'</div></div>').join(''):'<p class="budget-note">Inga köp registrerade för denna månad. Matköp visas automatiskt här.</p>';
     }catch(error){if(version===financeWeekVersion)fe('financeWeekTransactions').textContent='Kunde inte hämta månadens köp. Tryck på Uppdatera.';}
   }
   function financeEntryReset(keep={}){
@@ -2147,6 +2156,9 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
   });
   fe('financeView').addEventListener('click',e=>{
     const button=e.target.closest('button');if(!button||financeBusy)return;
+    if(button.dataset.financeFood){
+      setFinanceView('food');fe('budgetOverview').open=true;fe('budget').scrollIntoView({behavior:'smooth'});return;
+    }
     const confirmCategory=button.dataset.financeConfirm;
     if(confirmCategory){
       const category=financeCategories.find(c=>c.id===confirmCategory),date=fe('financeConfirmDate');
