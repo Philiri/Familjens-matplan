@@ -886,19 +886,33 @@ body.finance-mode .nav,body.finance-mode #foodView{display:none!important}
     return values.filter(Boolean).join(' + ');
   }
 
+  function shoppingCategory(item) {
+    const name=String(item.name||'').toLocaleLowerCase('sv-SE');
+    const category=String(item.category||'').toLocaleLowerCase('sv-SE').trim();
+    if(/fryst|frysta|frusen|djupfryst/.test(name+' '+category)) return 'Fryst';
+    if(/nudlar|havregryn/.test(name)) return 'Skafferi';
+    if(/grönsaker|frukt|grönt/.test(category)) return 'Frukt & grönt';
+    if(/bröd|bageri/.test(category)) return 'Bröd';
+    if(/skafferi|torrvaror/.test(category)) return 'Skafferi';
+    if(/mejeri|ägg|frukost/.test(category)) return 'Mejeri & ägg';
+    if(/kött|fisk|chark/.test(category)) return 'Kött & fisk';
+    if(/hygien/.test(category)) return 'Hygien';
+    return 'Övrigt';
+  }
+
   function renderShoppingList(listId, shopping, cardId) {
     const list=document.getElementById(listId);
     if(!list) return;
     const grouped=new Map();
     for(const item of shopping||[]) {
       if(isSeparateMince(item.name)) continue;
-      const category=/fryst/i.test(item.name)?'Fryst':/havregryn/i.test(item.name)?'Skafferi':item.category||'Övrigt';
+      const category=shoppingCategory(item);
       const name=shoppingName(item);
       const key=category+'|'+name.toLocaleLowerCase('sv-SE')+(item.is_manual?'|'+item.id:'');
       if(!grouped.has(key)) grouped.set(key,{category,name,items:[]});
       grouped.get(key).items.push(item);
     }
-    const categories=['Frukt & grönt','Kött & fisk','Mejeri & frukost','Bröd','Fryst','Skafferi','Övrigt'];
+    const categories=['Frukt & grönt','Bröd','Skafferi','Mejeri & ägg','Kött & fisk','Hygien','Övrigt','Fryst'];
     const rows=[...grouped.values()].sort((a,b)=>{
       const rank=c=>categories.includes(c)?categories.indexOf(c):categories.length;
       return rank(a.category)-rank(b.category)||a.name.localeCompare(b.name,'sv-SE');
